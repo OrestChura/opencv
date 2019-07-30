@@ -1,19 +1,12 @@
-// TODO: Rework
-
-// This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.
-//
-// Copyright (C) 2019, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-//  This sample demonstrates the use of pretrained face- and facial landmarks detection OpenVINO networks with opencv's dnn module.
+//  This sample is an OpenCV implementation of a face beautifiaction algorythm.
 //
 //  The sample uses two pretrained OpenVINO networks so the OpenVINO package has to be preinstalled.
-//  Please install topologies described below using downloader.py (.../openvino/deployment_tools/tools/model_downloader) to run this sample.
-//  Face detection model - face-detection-adas-0001: https://github.com/opencv/open_model_zoo/tree/master/intel_models/face-detection-adas-0001
-//  Facial landmarks detection model - facial-landmarks-35-adas-0002: url=https://github.com/opencv/open_model_zoo/tree/master/intel_models/facial-landmarks-35-adas-0002
-//
+//  Please install topologies described below using downloader.py
+//  (.../openvino/deployment_tools/tools/model_downloader) to run this sample.
+//  Face detection model - face-detection-adas-0001:
+//  https://github.com/opencv/open_model_zoo/tree/master/intel_models/face-detection-adas-0001
+//  Facial landmarks detection model - facial-landmarks-35-adas-0002:
+//  https://github.com/opencv/open_model_zoo/tree/master/intel_models/facial-landmarks-35-adas-0002
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -57,20 +50,9 @@ int main(int argc, char** argv)
      "{ landmstruct          | |     Full path to a facial Landmarks detection model structure file (for example, .xml file).}"
      "{ landmweights         | |     Full path to a facial Landmarks detection model weights file (for example, .bin file).}"
      "{ input          i     | |     Full path to an input image or a video file. Skip this argument to capture frames from a camera.}"
-     "{ facetarget           | 0 |   Choose one of target computation devices for facedetector: "
-                                         "0: CPU target (by default), "
-                                         "1: OpenCL, "
-                                         "2: OpenCL fp16 (half-float precision), "
-                                         "3: VPU }"
-     "{ landmtarget          | 0 |   Choose one of target computation devices for landmarkdetector: "
-                                         "0: CPU target (by default), "
-                                         "1: OpenCL, "
-                                         "2: OpenCL fp16 (half-float precision), "
-                                         "3: VPU }"
-        );
+     );
 
-    //TODO: change about
-    parser.about("Use this script to run classification deep learning networks using OpenCV.");
+    parser.about("Use this script to run face beautification algorythm.");
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -80,25 +62,20 @@ int main(int argc, char** argv)
     //Parsing input arguments
     const std::string faceXmlPath = parser.get<std::string>("facestruct");
     const std::string faceBinPath = parser.get<std::string>("faceweights");
-    const Target faceTarget = parser.get<Target>("facetarget");
 
     const std::string landmXmlPath = parser.get<std::string>("landmstruct");
     const std::string landmBinPath = parser.get<std::string>("landmweights");
-    const Target landmTarget = parser.get<Target>("landmtarget");
 
     //Models' definition & initialization
     Net faceNet = readNet(faceXmlPath, faceBinPath);
-    faceNet.setPreferableTarget(faceTarget);
     const unsigned int faceObjectSize = 7;
     const float faceConfThreshold = 0.7f;
     const unsigned int faceCols = 672;
     const unsigned int faceRows = 384;
 
     Net landmNet = readNet(landmXmlPath, landmBinPath);
-    landmNet.setPreferableTarget(landmTarget);
     const unsigned int landmCols = 60;
     const unsigned int landmRows = 60;
-    const float landmEnlargeCoeff = 1.0f;
 
     //Input
     VideoCapture cap;
@@ -120,22 +97,18 @@ int main(int argc, char** argv)
            break;
         }
 
-        //Preprocessing
-        Mat faceInput;
-        resize(img, faceInput, Size(faceCols, faceRows));
-
-        //Infering Facedetector
-        faceNet.setInput(blobFromImage(faceInput));
+        //Infering Face detector
+        faceNet.setInput(blobFromImage(img, 1.0, Size(faceCols, faceRows)));
         Mat faceOut = faceNet.forward();
 
         Mat mskFaces(img.rows,img.cols, CV_8UC3, Scalar(0, 0, 0));
         Mat mskBlurs(img.rows,img.cols, CV_8UC3, Scalar(0, 0, 0));
         Mat mskSharps(img.rows,img.cols, CV_8UC3, Scalar(0, 0, 0));
 
+            //Face boxes processing
         float* faceData = (float*)(faceOut.data);
         for (size_t i = 0ul; i < faceOut.total(); i += faceObjectSize)
         {
-            //Face rectangFace prediction processing
             float faceConfidence = faceData[i + 2];
             if (faceConfidence > faceConfThreshold)
             {
@@ -152,18 +125,15 @@ int main(int argc, char** argv)
 
                 //Postprocessing for landmarks
                 int faceMaxSize = std::max(faceWidth, faceHeight);
-                int faceWidthAdd = int(faceMaxSize * landmEnlargeCoeff) - faceWidth;
-                int faceHeightAdd = int(faceMaxSize * landmEnlargeCoeff) - faceHeight;
+                int faceWidthAdd = faceMaxSize - faceWidth;
+                int faceHeightAdd = faceMaxSize - faceHeight;
 
                 Mat imgCrop;
                 cv::copyMakeBorder(img(Rect(faceLeft, faceTop, faceWidth, faceHeight)), imgCrop, faceHeightAdd / 2, (faceHeightAdd + 1) / 2,
                                    faceWidthAdd / 2, (faceWidthAdd + 1) / 2, BORDER_CONSTANT | BORDER_ISOLATED , clrBlack);
 
-                Mat landmInput;
-                resize(imgCrop, landmInput, Size(landmCols, landmRows));
-
-                //Infering Landmarkdetector
-                landmNet.setInput(blobFromImage(landmInput));
+                //Infering Landmarks detector
+                landmNet.setInput(blobFromImage(imgCrop, 1.0, Size(landmCols, landmRows)));
                 Mat landmOut = landmNet.forward();
 
                 //Landmarks processing
@@ -270,7 +240,9 @@ int main(int argc, char** argv)
                 mskBlurs = mskBlurs - mskBlurs.mul(mskBlurGaussed) + mskBlurGaussed;
                 mskSharps = mskSharps - mskSharps.mul(mskSharpGaussed) + mskSharpGaussed;
 
-                //Drawing rectangle and landmarks
+//Uncomment the following section to draw face box and facial landmarks on the input image
+//in a separate window
+
 //                Mat imgDraw;
 //                img.copyTo(imgDraw);
 //                {
@@ -283,6 +255,8 @@ int main(int argc, char** argv)
 //                    polylines(imgDraw, vctvctContours, true, clrYellow);
 //                }
 //                rectangle(imgDraw, Rect(faceLeft, faceTop, faceWidth, faceHeight), clrGreen, 1);
+//                namedWindow("Box and landmarks", WINDOW_NORMAL);
+//                imshow("Box and landmarks", imgDraw);
             }
             else
             {
