@@ -15,8 +15,11 @@ using namespace cv;
 using namespace cv::dnn;
 
 #include <iostream>
+#include <fstream>
 
-static void unsharpMask(InputArray src, OutputArray dst, int sigma, double strength)
+namespace custom{
+
+void unsharpMask(InputArray src, OutputArray dst, int sigma, double strength)
 {
     std::vector<Mat> chlsInput, chlsOut;
     split(src, chlsInput);
@@ -33,6 +36,74 @@ static void unsharpMask(InputArray src, OutputArray dst, int sigma, double stren
     merge(chlsOut, dst);
 }
 
+void seekToLayer(std::ifstream& xml)
+{
+    std::string strInput;
+    std::getline(xml, strInput, '<');
+    std::getline(xml, strInput, '>');
+    while (!(xml.eof() || strInput.compare(0, 5, "layer")))
+    {
+        std::getline(xml, strInput);
+        std::getline(xml, strInput, '<');
+        std::getline(xml, strInput, '>');
+    }
+}
+
+void getNetInputParams(const std::string XmlPath, int& Cols, int& Rows, int& ObjectSize)
+{
+//    std::ifstream Xml(XmlPath);
+//    std::vector<int> Size;
+//    seekToLayer(Xml);
+//    std::string StrInput;
+//    if (StrInput == "dim")
+//    {
+//        int temp;
+//        Xml >> temp;
+//        Size.push_back(temp);
+//    }
+//    std::getline(Xml, StrInput);
+//    Xml.close();
+//    Rows = Size[2];
+//    Cols = Size[3];
+//    //WIP
+    if (XmlPath == "/home/orestchura/git/opencv_extra/testdata/dnn/omz_intel_models/Transportation/object_detection/face/pruned_mobilenet_reduced_ssd_shared_weights/dldt/face-detection-adas-0001.xml")
+    {
+        Cols = 672;
+        Rows = 384;
+        ObjectSize = 7;
+    }
+    else
+    {
+        Cols = 60;
+        Rows = 60;
+        ObjectSize = 0;
+    }
+}
+
+cv::Rect getFace(const float* faceData, const size_t imgCols, const size_t imgRows)
+{
+    uint faceLeft = uint(std::max(int(faceData[3] * imgCols), 0));
+    uint faceTop = uint(std::max(int(faceData[4] * imgRows), 0));
+    uint faceRight  = uint(std::min(int(faceData[5] * imgCols), int(imgCols - 2)));
+    uint faceBot = uint(std::min(int(faceData[6] * imgRows), int(imgRows - 2)));
+    uint faceWidth  = faceRight - faceLeft + 1;
+    uint faceHeight = faceBot - faceTop + 1;
+    return cv::Rect(faceLeft, faceTop, faceWidth, faceHeight);
+}
+
+Size getBorderSizeAddToSquare(const cv::Rect face)
+{
+    int faceMaxSize = std::max(face.width, face.height);
+    return Size(faceMaxSize - face.width, faceMaxSize - face.height);
+}
+
+void getLandmarks(const float* landmData, Point* ptsFaceElems[18], std::vector<Point>& vctJaw)
+{
+
+}
+
+}//namespace custom
+
 int main(int argc, char** argv)
 {
     const std::string winFB = "FaceBeautificator";
@@ -45,14 +116,21 @@ int main(int argc, char** argv)
     const double pi = 3.1415926535897;
 
     CommandLineParser parser(argc, argv,
-     "{ help         h       | |     Print the help message. }"
-     "{ facestruct           | |     Full path to a Face detection model structure file (for example, .xml file).}"
-     "{ faceweights          | |     Full path to a Face detection model weights file (for example, .bin file).}"
-     "{ landmstruct          | |     Full path to a facial Landmarks detection model structure file (for example, .xml file).}"
-     "{ landmweights         | |     Full path to a facial Landmarks detection model weights file (for example, .bin file).}"
-     "{ input        i       | |     Full path to an input image or a video file. Skip this argument to capture frames from a camera.}"
-     "{ boxes        b       |false| Set true if want to draw face boxes in the \"Input\" window.}"
-     "{ landmarks    l       |false| Set true if want to draw facial landmarks in the \"Input\" window.}"
+     "{ help         h       ||      print the help message. }"
+
+     "{ facepath     f       ||      full path to a Face detection model (.xml) file and weights(.bin) file directory.}"
+     "{ facename             |face-detection-adas-0001|     the face detection model name.}"
+     "{ facemodelext         |.xml|  the face detection model file extension.}"
+     "{ faceweightsext       |.bin|  the face detection weights file extension.}"
+
+     "{ landmpath    l       ||      full path to a facial Landmarks detection model (.xml) file and weights (.bin) file directory.}"
+     "{ landmname            |facial-landmarks-35-adas-0002|     the facial landmarks detection model name.}"
+     "{ landmmodelext        |.xml|  the landmarks detection model file extension.}"
+     "{ landmweightsext      |.bin|  the landmarks detection weights file extension.}"
+
+     "{ input        i       ||      full path to an input image or a video file. Skip this argument to capture frames from a camera.}"
+     "{ boxes        b       |false| set true if want to draw face Boxes in the \"Input\" window.}"
+     "{ landmarks    m       |false| set true if want to draw facial landMarks in the \"Input\" window.}"
      );
 
     parser.about("Use this script to run face beautification algorythm.");
@@ -63,25 +141,36 @@ int main(int argc, char** argv)
     }
 
     //Parsing input arguments
-    const std::string faceXmlPath = parser.get<std::string>("facestruct");
-    const std::string faceBinPath = parser.get<std::string>("faceweights");
+    const std::string facePath = parser.get<std::string>("facepath");
+    const std::string faceName = parser.get<std::string>("facename");
+    const std::string faceModelExt = parser.get<std::string>("facemodelext");
+    const std::string faceWeightsExt = parser.get<std::string>("faceweightsext");
+    const std::string faceXmlPath = facePath + "/" + faceName + faceModelExt;
+    const std::string faceBinPath = facePath + "/" + faceName + faceWeightsExt;
 
-    const std::string landmXmlPath = parser.get<std::string>("landmstruct");
-    const std::string landmBinPath = parser.get<std::string>("landmweights");
+    const std::string landmPath = parser.get<std::string>("landmpath");
+    const std::string landmName = parser.get<std::string>("landmname");
+    const std::string landmModelExt = parser.get<std::string>("landmmodelext");
+    const std::string landmWeightsExt = parser.get<std::string>("landmweightsext");
+    const std::string landmXmlPath = landmPath + "/" + landmName + landmModelExt;
+    const std::string landmBinPath = landmPath + "/" + landmName + landmWeightsExt;
 
     const bool flgBoxes = parser.get<bool>("boxes");
     const bool flgLandmarks = parser.get<bool>("landmarks");
 
     //Models' definition & initialization
     Net faceNet = readNet(faceXmlPath, faceBinPath);
-    const unsigned int faceObjectSize = 7;
     const float faceConfThreshold = 0.7f;
-    const unsigned int faceCols = 672;
-    const unsigned int faceRows = 384;
+    int faceCols;
+    int faceRows;
+    int faceObjectSize;
+    custom::getNetInputParams(faceXmlPath, faceCols, faceRows, faceObjectSize);
 
     Net landmNet = readNet(landmXmlPath, landmBinPath);
-    const unsigned int landmCols = 60;
-    const unsigned int landmRows = 60;
+    int landmCols;
+    int landmRows;
+    int landmObjectSize;
+    custom::getNetInputParams(landmXmlPath, landmCols, landmRows, landmObjectSize);
 
     //Input
     VideoCapture cap;
@@ -96,6 +185,9 @@ int main(int argc, char** argv)
     }
 
     Mat img;
+    Mat mskNoFaces;
+    Mat mskBlurs;
+    Mat mskSharps;
 
     while (waitKey(1) < 0)
     {
@@ -112,9 +204,12 @@ int main(int argc, char** argv)
         faceNet.setInput(blobFromImage(img, 1.0, Size(faceCols, faceRows)));
         Mat faceOut = faceNet.forward();
 
-        Mat mskNoFaces(img.rows,img.cols, CV_8UC3, Scalar(1, 1, 1));
-        Mat mskBlurs(img.rows,img.cols, CV_8UC3, Scalar(0, 0, 0));
-        Mat mskSharps(img.rows,img.cols, CV_8UC3, Scalar(0, 0, 0));
+        mskNoFaces.create(img.rows, img.cols, CV_8UC3);
+        mskNoFaces.setTo(Scalar(1, 1, 1));
+        mskBlurs.create(img.rows, img.cols, CV_8UC3);
+        mskBlurs.setTo(Scalar(0, 0, 0));
+        mskSharps.create(img.rows, img.cols, CV_8UC3);
+        mskSharps.setTo(Scalar(0, 0, 0));
 
         //Face boxes processing
         float* faceData = (float*)(faceOut.data);
@@ -123,27 +218,15 @@ int main(int argc, char** argv)
             float faceConfidence = faceData[i + 2];
             if (faceConfidence > faceConfThreshold)
             {
-                int faceLeft = int(faceData[i + 3] * img.cols);
-                faceLeft = std::max(faceLeft, 0);
-                int faceTop = int(faceData[i + 4] * img.rows);
-                faceTop = std::max(faceTop, 0);
-                int faceRight  = int(faceData[i + 5] * img.cols);
-                faceRight = std::min(faceRight, img.cols - 2);
-                int faceBot = int(faceData[i + 6] * img.rows);
-                faceBot = std::min(faceBot, img.rows - 2);
-                int faceWidth  = faceRight - faceLeft + 1;
-                int faceHeight = faceBot - faceTop + 1;
+                cv::Rect face = custom::getFace(faceData + i, img.cols, img.rows);
 
                 //Postprocessing for landmarks
-                int faceMaxSize = std::max(faceWidth, faceHeight);
-                int faceWidthAdd = faceMaxSize - faceWidth;
-                int faceHeightAdd = faceMaxSize - faceHeight;
-
+                Size faceAdd = custom::getBorderSizeAddToSquare(face);
                 Mat imgCrop;
-                cv::copyMakeBorder(img(Rect(faceLeft, faceTop, faceWidth, faceHeight)), imgCrop,
-                                   faceHeightAdd / 2, (faceHeightAdd + 1) / 2,
-                                   faceWidthAdd / 2, (faceWidthAdd + 1) / 2,
-                                   BORDER_CONSTANT | BORDER_ISOLATED , clrBlack);
+                cv::copyMakeBorder(img(Rect(face.x, face.y, face.width, face.height)), imgCrop,
+                                   faceAdd.height / 2, (faceAdd.height + 1) / 2,
+                                   faceAdd.width / 2, (faceAdd.width + 1) / 2,
+                                   BORDER_CONSTANT | BORDER_ISOLATED , cv::Scalar(0, 0, 0));
 
                 //Infering Landmarks detector
                 landmNet.setInput(blobFromImage(imgCrop, 1.0, Size(landmCols, landmRows)));
@@ -151,25 +234,27 @@ int main(int argc, char** argv)
 
                 //Landmarks processing
                 float* landmData = (float*)(landmOut.data);
-                Point ptsFaceElems[18];
+                std::vector<Point> ptsFaceElems(18);
+
                 size_t j = 0ul;
                 for (; j < 18 * 2; j += 2)
                 {
-                    ptsFaceElems[j / 2] = Point(int(landmData[j] * imgCrop.cols + faceLeft -
-                                                    faceWidthAdd / 2),
-                                                int(landmData[j+1] * imgCrop.rows + faceTop -
-                                                    faceHeightAdd / 2));
+                    ptsFaceElems[j / 2] = Point(int(landmData[j] * imgCrop.cols + face.x
+                                                    - faceAdd.width / 2),
+                                                int(landmData[j + 1] * imgCrop.rows + face.y
+                                                    - faceAdd.height / 2));
                 }
 
                 std::vector<Point> vctFace;
                 {
                     std::vector<Point> vctJaw;
+                    vctJaw.reserve(17);
                     for(; j < landmOut.total(); j += 2)
                     {
-                        vctJaw.push_back(Point(int(landmData[j] * imgCrop.cols + faceLeft -
-                                                   faceWidthAdd / 2),
-                                               int(landmData[j + 1] * imgCrop.rows + faceTop -
-                                                   faceHeightAdd / 2)));
+                        vctJaw.push_back(Point(int(landmData[j] * imgCrop.cols + face.x
+                                                   - faceAdd.width / 2),
+                                               int(landmData[j + 1] * imgCrop.rows + face.y
+                                                   - faceAdd.height / 2)));
                     }
                     Point ptJawCenter((vctJaw[0] + vctJaw[16]) / 2);
                     double angFace = atan((double)(vctJaw[8] - ptJawCenter).x /
@@ -284,7 +369,7 @@ int main(int argc, char** argv)
                 }
                 if (flgBoxes == true)
                 {
-                    rectangle(imgDraw, Rect(faceLeft, faceTop, faceWidth, faceHeight),
+                    rectangle(imgDraw, face,
                               clrGreen, 1);
                 }
             }
@@ -297,7 +382,7 @@ int main(int argc, char** argv)
         Mat imgBilat;
         Mat imgSharp;
         bilateralFilter(img, imgBilat, 9, 30, 30);
-        unsharpMask(img, imgSharp, 3, 1);
+        custom::unsharpMask(img, imgSharp, 3, 1);
 
         Mat imgShow = img.mul(mskNoFaces) + imgBilat.mul(mskBlurs) + imgSharp.mul(mskSharps);
 
