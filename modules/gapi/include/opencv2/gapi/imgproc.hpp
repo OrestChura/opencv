@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_IMGPROC_HPP
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/video.hpp>
 
 #include <utility> // std::tuple
 
@@ -29,6 +30,12 @@ namespace cv { namespace gapi {
 namespace imgproc {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
+
+    using GArrayPoint2f = cv::GArray<cv::Point2f>;
+    using GArrayUchar   = cv::GArray<uchar>;
+    using GArrayDouble  = cv::GArray<double>;
+    using GArrayMat     = cv::GArray<cv::GMat>;
+    using GArrOutLK     = std::tuple<GArrayPoint2f, GArrayUchar, GArrayDouble>;
 
     G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, Mat, Point, Scalar, int, Scalar) {
@@ -99,6 +106,13 @@ namespace imgproc {
     G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.canny"){
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
+        }
+    };
+
+    G_TYPED_KERNEL(GCalcOptFlowPyrLK, <GArrOutLK(GArrayMat,GArrayMat,GArrayPoint2f,GArrayPoint2f,cv::Size,int,cv::TermCriteria,int,double)>,
+                   "org.opencv.imgproc.optFlowPyrLK") {
+        static std::tuple<GArrayDesc, GArrayDesc, GArrayDesc> outMeta(GArrayDesc, GArrayDesc, GArrayDesc, GArrayDesc, cv::Size, int, cv::TermCriteria, int, double) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
         }
     };
 
@@ -641,6 +655,61 @@ L2gradient=false ).
  */
 GAPI_EXPORTS GMat Canny(const GMat& image, double threshold1, double threshold2,
                         int apertureSize = 3, bool L2gradient = false);
+
+/** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade
+method with pyramids.
+
+The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids.
+See @cite Bouguet00 . The function is parallelized with the TBB library.
+
+@note
+
+-   An example using the Lucas-Kanade optical flow algorithm can be found at
+    opencv_source_code/samples/cpp/lkdemo.cpp
+-   (Python) An example using the Lucas-Kanade optical flow algorithm can be found at
+    opencv_source_code/samples/python/lk_track.py
+-   (Python) An example using the Lucas-Kanade tracker for homography matching can be found at
+    opencv_source_code/samples/python/lk_homography.py
+
+@note Function textual ID is "org.opencv.imgproc.optFlowPyrLK"
+
+@param prevImg first 8-bit input image or pyramid constructed by buildOpticalFlowPyramid.
+@param nextImg second input image or pyramid of the same size and the same type as prevImg.
+@param prevPts vector of 2D points for which the flow needs to be found; point coordinates must be
+single-precision floating-point numbers.
+@param nextPts output vector of 2D points (with single-precision floating-point coordinates)
+containing the calculated new positions of input features in the second image; when
+OPTFLOW_USE_INITIAL_FLOW flag is passed, the vector must have the same size as in the input.
+@param status output status vector (of unsigned chars); each element of the vector is set to 1 if
+the flow for the corresponding features has been found, otherwise, it is set to 0.
+@param err output vector of errors; each element of the vector is set to an error for the
+corresponding feature, type of the error measure can be set in flags parameter; if the flow wasn't
+found then the error is not defined (use the status parameter to find such cases).
+@param winSize size of the search window at each pyramid level.
+@param maxLevel 0-based maximal pyramid level number; if set to 0, pyramids are not used (single
+level), if set to 1, two levels are used, and so on; if pyramids are passed to input then
+algorithm will use as many levels as pyramids have but no more than maxLevel.
+@param criteria parameter, specifying the termination criteria of the iterative search algorithm
+(after the specified maximum number of iterations criteria.maxCount or when the search window
+moves by less than criteria.epsilon.
+@param flags operation flags:
+ -   **OPTFLOW_USE_INITIAL_FLOW** uses initial estimations, stored in nextPts; if the flag is
+     not set, then prevPts is copied to nextPts and is considered the initial estimate.
+ -   **OPTFLOW_LK_GET_MIN_EIGENVALS** use minimum eigen values as an error measure (see
+     minEigThreshold description); if the flag is not set, then L1 distance between patches
+     around the original and a moved point, divided by number of pixels in a window, is used as a
+     error measure.
+@param minEigThreshold the algorithm calculates the minimum eigen value of a 2x2 normal matrix of
+optical flow equations (this matrix is called a spatial gradient matrix in @cite Bouguet00), divided
+by number of pixels in a window; if this value is less than minEigThreshold, then a corresponding
+feature is filtered out and its flow is not processed, so it allows to remove bad points and get a
+performance boost.
+ */
+GAPI_EXPORTS std::tuple<GArray<Point2f>, GArray<uchar>, GArray<double>> calcOpticalFlowPyrLK(const GArray<GMat>& prevImg,
+                    const GArray<GMat>& nextImg, const GArray<Point2f>& prevPts,
+                    const GArray<Point2f>& predPts = GArray<Point2f>(), Size winSize = Size(21, 21), int maxLevel = 3,
+                    TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 0.01),
+                    int flags = 0, double minEigThresh = 1e-4);
 
 /** @brief Equalizes the histogram of a grayscale image.
 

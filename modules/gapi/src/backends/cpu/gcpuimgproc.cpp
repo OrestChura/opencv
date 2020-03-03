@@ -180,6 +180,15 @@ GAPI_OCV_KERNEL(GCPUCanny, cv::gapi::imgproc::GCanny)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUCalcOptFlowPyrLK, cv::gapi::imgproc::GCalcOptFlowPyrLK)
+{
+    static void run(const std::vector<cv::Mat>& prevImg, const std::vector<cv::Mat>& nextImg, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& predPts, cv::Size winSize, int maxLevel, cv::TermCriteria criteria, int flags, double minEigThresh, std::vector<cv::Point2f>& outPts, std::vector<uchar>& status, std::vector<double>& err)
+    {
+        outPts = std::vector<cv::Point2f>(predPts);
+        cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, outPts, status, err, winSize, maxLevel, criteria, flags, minEigThresh);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -360,6 +369,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUSobel
         , GCPUSobelXY
         , GCPUCanny
+        , GCPUCalcOptFlowPyrLK
         , GCPUEqualizeHist
         , GCPURGB2YUV
         , GCPUYUV2RGB
