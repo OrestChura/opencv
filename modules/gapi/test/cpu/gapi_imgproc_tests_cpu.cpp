@@ -196,6 +196,31 @@ INSTANTIATE_TEST_CASE_P(CannyTestCPU, CannyTest,
                                 Values(3, 5),
                                 testing::Bool()));
 
+INSTANTIATE_TEST_CASE_P(OptFlowLKTestCPU, OptFlowLKTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_obj(),
+                                                       AbsExactVector<uchar>().to_compare_obj(),
+                                                       AbsExactVector<float>().to_compare_obj())),
+                                Values("cv/optflow/frames/VGA_%02d.png",
+                                       "cv/optflow/frames/720p_%02d.png"),
+                                testing::Range(1, 3),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11)));
+
+INSTANTIATE_TEST_CASE_P(OptFlowPyrLKTestCPU, OptFlowPyrLKTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_obj(),
+                                                       AbsExactVector<uchar>().to_compare_obj(),
+                                                       AbsExactVector<float>().to_compare_obj())),
+                                Values("cv/optflow/frames/VGA_%02d.png",
+                                       "cv/optflow/frames/720p_%02d.png"),
+                                testing::Range(1, 3),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11),
+                                testing::Bool()));
+
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestCPU, RGB2GrayTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),

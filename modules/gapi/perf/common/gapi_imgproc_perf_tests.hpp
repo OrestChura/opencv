@@ -33,6 +33,10 @@ class Dilate3x3PerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Siz
 class SobelPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int,int, cv::GCompileArgs>> {};
 class SobelXYPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
 class CannyPerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Size,double,double,int,bool, cv::GCompileArgs>> {};
+class OptFlowLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,compare_vector_f<uchar>,compare_vector_f<float>>,
+                                                      std::string,int,int,tuple<int,int>,int, cv::GCompileArgs>> {};
+class OptFlowPyrLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,compare_vector_f<uchar>,compare_vector_f<float>>,
+                                                         std::string,int,int,tuple<int,int>,int,bool, cv::GCompileArgs>> {};
 class EqHistPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
 class RGB2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
 class BGR2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};

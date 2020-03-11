@@ -50,6 +50,25 @@ namespace
             rgb2yuyv(in_line_p, out_line_p, in.cols);
         }
     }
+
+    void FormTrackingPointsArray(vector<Point2f>& points, int width, int height, int nPointsX, int nPointsY)
+    {
+        int stepX = width / nPointsX;
+        int stepY = height / nPointsY;
+        if (stepX < 1 || stepY < 1) FAIL() << "Specified points number is too big";
+
+        points.clear();
+        points.reserve(nPointsX * nPointsY);
+
+        for (int x = stepX / 2; x < width; x += stepX)
+        {
+            for (int y = stepY / 2; y < height; y += stepY)
+            {
+                Point2f pt(static_cast<float>(x), static_cast<float>(y));
+                points.push_back(pt);
+            }
+        }
+    }
 }
 
 TEST_P(Filter2DTest, AccuracyTest)
@@ -377,6 +396,152 @@ TEST_P(CannyTest, AccuracyTest)
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
+TEST_P(OptFlowLKTest, AccuracyTest)
+{
+    initTestDataPath();
+
+    int maxLevel = 2, flags = 0;
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
+    double minEigThreshold = 1e-4;
+
+    switch (channels)
+    {
+        case 1:
+            in_mat1 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format)),
+                                 cv::IMREAD_GRAYSCALE);
+            in_mat2 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format + 1)),
+                                 cv::IMREAD_GRAYSCALE);
+            break;
+        case 3:
+            in_mat1 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format)));
+            in_mat2 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format + 1)));
+            break;
+        case 4:
+            cvtColor(cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format))),
+                     in_mat1, cv::COLOR_BGR2BGRA);
+            cvtColor(cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format + 1))),
+                     in_mat2, cv::COLOR_BGR2BGRA);
+            break;
+        default:
+            FAIL() << "Unexpected number of channels: " << channels;
+    }
+
+    int nPointsX = std::min(std::get<0>(nPoints), in_mat1.cols);
+    int nPointsY = std::min(std::get<1>(nPoints), in_mat1.rows);
+
+    std::vector<cv::Point2f> in_vec_pts, out_vec_pts_ocv, out_vec_pts_gapi;
+    std::vector<uchar> out_vec_status_ocv, out_vec_status_gapi;
+    std::vector<float> out_vec_err_ocv, out_vec_err_gapi;
+
+    FormTrackingPointsArray(in_vec_pts, in_mat1.cols, in_mat1.rows, nPointsX, nPointsY);
+    out_vec_pts_ocv.resize(in_vec_pts.size());
+    out_vec_pts_gapi.resize(in_vec_pts.size());
+    out_vec_status_ocv.resize(in_vec_pts.size());
+    out_vec_status_gapi.resize(in_vec_pts.size());
+    out_vec_err_ocv.resize(in_vec_pts.size());
+    out_vec_err_gapi.resize(in_vec_pts.size());
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat inPrev, inNext;
+    cv::GArray<cv::Point2f> inPts, predPts;
+    auto out = cv::gapi::calcOpticalFlowPyrLK(inPrev, inNext, inPts, predPts,
+                                              cv::Size(winSize, winSize), maxLevel, criteria,
+                                              flags, minEigThreshold);
+    cv::GComputation c(cv::GIn(inPrev, inNext, inPts, predPts),
+                       cv::GOut(std::get<0>(out), std::get<1>(out), std::get<2>(out)));
+
+    c.apply(cv::gin(in_mat1, in_mat2, in_vec_pts, std::vector<cv::Point2f>()),
+            cv::gout(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::calcOpticalFlowPyrLK(in_mat1, in_mat2, in_vec_pts, out_vec_pts_ocv, out_vec_status_ocv,
+                                 out_vec_err_ocv, cv::Size(winSize, winSize), maxLevel, criteria,
+                                 flags, minEigThreshold);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(std::get<0>(cmpFs)(out_vec_pts_gapi, out_vec_pts_ocv) &&
+                    std::get<1>(cmpFs)(out_vec_status_gapi, out_vec_status_ocv) &&
+                    std::get<2>(cmpFs)(out_vec_err_gapi, out_vec_err_ocv));
+    }
+}
+
+TEST_P(OptFlowPyrLKTest, AccuracyTest)
+{
+    initTestDataPath();
+
+    int maxLevel = 2, flags = 0;
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
+    double minEigThreshold = 1e-4;
+
+    switch (channels)
+    {
+        case 1:
+            in_mat1 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format)),
+                                 cv::IMREAD_GRAYSCALE);
+            in_mat2 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format + 1)),
+                                 cv::IMREAD_GRAYSCALE);
+            break;
+        case 3:
+            in_mat1 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format)));
+            in_mat2 = cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format + 1)));
+            break;
+        case 4:
+            cvtColor(cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format))),
+                     in_mat1, cv::COLOR_BGR2BGRA);
+            cvtColor(cv::imread(perf::TestBase::getDataPath(cv::format(fileNamePattern.c_str(), format + 1))),
+                     in_mat2, cv::COLOR_BGR2BGRA);
+            break;
+        default:
+            FAIL() << "Unexpected number of channels: " << channels;
+    }
+
+    std::vector<cv::Mat> in_pyr1, in_pyr2;
+    maxLevel = cv::buildOpticalFlowPyramid(in_mat1, in_pyr1, cv::Size(winSize, winSize),
+                                           maxLevel, withDeriv);
+    maxLevel = cv::buildOpticalFlowPyramid(in_mat2, in_pyr2, cv::Size(winSize, winSize),
+                                           maxLevel, withDeriv);
+
+    int nPointsX = std::min(std::get<0>(nPoints), in_mat1.cols);
+    int nPointsY = std::min(std::get<1>(nPoints), in_mat1.rows);
+
+    std::vector<cv::Point2f> in_vec_pts, out_vec_pts_ocv, out_vec_pts_gapi;
+    std::vector<uchar> out_vec_status_ocv, out_vec_status_gapi;
+    std::vector<float> out_vec_err_ocv, out_vec_err_gapi;
+
+    FormTrackingPointsArray(in_vec_pts, in_mat1.cols, in_mat1.rows, nPointsX, nPointsY);
+    out_vec_pts_ocv.resize(in_vec_pts.size());
+    out_vec_pts_gapi.resize(in_vec_pts.size());
+    out_vec_status_ocv.resize(in_vec_pts.size());
+    out_vec_status_gapi.resize(in_vec_pts.size());
+    out_vec_err_ocv.resize(in_vec_pts.size());
+    out_vec_err_gapi.resize(in_vec_pts.size());
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GArray<cv::GMat> inPrev, inNext;
+    cv::GArray<cv::Point2f> inPts, predPts;
+    auto out = cv::gapi::calcOpticalFlowPyrLK(inPrev, inNext, inPts, predPts,
+                                              cv::Size(winSize, winSize), maxLevel, criteria,
+                                              flags, minEigThreshold);
+    cv::GComputation c(cv::GIn(inPrev, inNext, inPts, predPts),
+                       cv::GOut(std::get<0>(out), std::get<1>(out), std::get<2>(out)));
+
+    c.apply(cv::gin(in_pyr1, in_pyr2, in_vec_pts, std::vector<cv::Point2f>()),
+            cv::gout(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::calcOpticalFlowPyrLK(in_pyr1, in_pyr2, in_vec_pts, out_vec_pts_ocv, out_vec_status_ocv,
+                                 out_vec_err_ocv, cv::Size(winSize, winSize), maxLevel, criteria,
+                                 flags, minEigThreshold);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(std::get<0>(cmpFs)(out_vec_pts_gapi, out_vec_pts_ocv) &&
+                    std::get<1>(cmpFs)(out_vec_status_gapi, out_vec_status_ocv) &&
+                    std::get<2>(cmpFs)(out_vec_err_gapi, out_vec_err_ocv));
     }
 }
 

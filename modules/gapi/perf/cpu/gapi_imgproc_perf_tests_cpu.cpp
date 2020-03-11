@@ -134,6 +134,31 @@ INSTANTIATE_TEST_CASE_P(CannyPerfTestCPU, CannyPerfTest,
         Values(true, false),
         Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(OptFlowLKPerfTestCPU, OptFlowLKPerfTest,
+                        Combine(Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_f(),
+                                                       AbsExactVector<uchar>().to_compare_f(),
+                                                       AbsExactVector<float>().to_compare_f())),
+                                Values("cv/optflow/frames/VGA_%02d.png",
+                                       "cv/optflow/frames/720p_%02d.png"),
+                                testing::Range(1, 3),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(OptFlowPyrLKPerfTestCPU, OptFlowPyrLKPerfTest,
+                        Combine(Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_f(),
+                                                       AbsExactVector<uchar>().to_compare_f(),
+                                                       AbsExactVector<float>().to_compare_f())),
+                                Values("cv/optflow/frames/VGA_%02d.png",
+                                       "cv/optflow/frames/720p_%02d.png"),
+                                testing::Range(1, 3),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11),
+                                Values(true, false),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(EqHistPerfTestCPU, EqHistPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(szVGA, sz720p, sz1080p),

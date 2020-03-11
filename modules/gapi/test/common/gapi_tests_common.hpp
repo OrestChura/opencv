@@ -157,6 +157,22 @@ public:
 
     // empty function intended to show that nothing is to be initialized via TestFunctional methods
     void initNothing(int, cv::Size, int, bool = true) {}
+
+    void initTestDataPath()
+    {
+#ifndef WINRT
+        static bool initialized = false;
+        if (!initialized)
+        {
+            // Since G-API has no own test data (yet), it is taken from the common space
+            const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
+            GAPI_Assert(testDataPath != nullptr);
+
+            cvtest::addDataSearchPath(testDataPath);
+            initialized = true;
+        }
+#endif // WINRT
+    }
 };
 
 template<class T>
@@ -168,6 +184,10 @@ class TestPerfParams: public TestFunctional, public perf::TestBaseWithParam<T>{}
 using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 
 using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
+
+template<typename Elem>
+using compare_vector_f = std::function<bool(const std::vector<Elem> &a, const std::vector<Elem> &b)>;
+
 
 // FIXME: re-use MatType. current problem: "special values" interpreted incorrectly (-1 is printed
 //        as 16FC512)
@@ -218,6 +238,35 @@ struct Params
     }
 };
 
+template<typename ...SpecificParams>
+struct ParamsNoInit
+{
+    using gcomp_args_function_t = cv::GCompileArgs(*)();
+    using common_params_t = std::tuple<gcomp_args_function_t>;
+    using specific_params_t = std::tuple<SpecificParams...>;
+    using params_t = std::tuple<gcomp_args_function_t, SpecificParams...>;
+    static constexpr const size_t common_params_size = std::tuple_size<common_params_t>::value;
+    static constexpr const size_t specific_params_size = std::tuple_size<specific_params_t>::value;
+
+    template<size_t I>
+    static const typename std::tuple_element<I, common_params_t>::type&
+        getCommon(const params_t& t)
+    {
+        static_assert(I < common_params_size, "Index out of range");
+        return std::get<I>(t);
+    }
+
+    template<size_t I>
+    static const typename std::tuple_element<I, specific_params_t>::type&
+        getSpecific(const params_t& t)
+    {
+        static_assert(specific_params_size > 0,
+                      "Impossible to call this function: no specific parameters specified");
+        static_assert(I < specific_params_size, "Index out of range");
+        return std::get<common_params_size + I>(t);
+    }
+};
+
 // Base class for test fixtures
 template<typename ...SpecificParams>
 struct TestWithParamBase : TestFunctional,
@@ -252,6 +301,35 @@ struct TestWithParamBase : TestFunctional,
     }
 };
 
+template<typename ...SpecificParams>
+struct TestWithParamBaseNoInit : TestFunctional,
+    TestWithParam<typename ParamsNoInit<SpecificParams...>::params_t>
+{
+    using AllParams = ParamsNoInit<SpecificParams...>;
+
+    // Get common (pre-defined) parameter value by index
+    template<size_t I>
+    inline auto getCommonParam() const
+        -> decltype(AllParams::template getCommon<I>(this->GetParam()))
+    {
+        return AllParams::template getCommon<I>(this->GetParam());
+    }
+
+    // Get specific (user-defined) parameter value by index
+    template<size_t I>
+    inline auto getSpecificParam() const
+        -> decltype(AllParams::template getSpecific<I>(this->GetParam()))
+    {
+        return AllParams::template getSpecific<I>(this->GetParam());
+    }
+
+    // Return G-API compile arguments specified for test fixture
+    inline cv::GCompileArgs getCompileArgs() const
+    {
+        return getCommonParam<0>()();
+    }
+};
+
 /**
  * @private
  * @brief Create G-API test fixture with TestWithParamBase base class
@@ -270,6 +348,13 @@ struct TestWithParamBase : TestFunctional,
             "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
         __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
         Fixture() { InitF(type, sz, dtype); } \
+    };
+
+#define GAPI_TEST_FIXTURE_NO_INIT(Fixture, API, Number, ...) \
+    struct Fixture : public TestWithParamBaseNoInit API { \
+        static_assert(Number == AllParams::specific_params_size, \
+            "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
+        __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
     };
 
 // Wrapper for test fixture API. Use to specify multiple types.
@@ -297,6 +382,10 @@ private:
 
 using CompareMats = CompareF<cv::Mat, cv::Mat>;
 using CompareScalars = CompareF<cv::Scalar, cv::Scalar>;
+
+template<typename Elem>
+using CompareVectors = CompareF<std::vector<Elem>,
+    std::vector<Elem>>;
 
 template<typename T>
 struct Wrappable
@@ -337,6 +426,28 @@ struct WrappableScalar
         std::stringstream ss;
         ss << t;
         return CompareScalars(to_compare_f(), ss.str());
+    }
+};
+
+template<typename T, typename Elem>
+struct WrappableVector
+{
+    compare_vector_f<Elem> to_compare_f()
+    {
+        T t = *static_cast<T* const>(this);
+        return [t](const std::vector<Elem>& a,
+                   const std::vector<Elem>& b)
+        {
+            return t(a, b);
+        };
+    }
+
+    CompareVectors<Elem> to_compare_obj()
+    {
+        T t = *static_cast<T* const>(this);
+        std::stringstream ss;
+        ss << t;
+        return CompareVectors<Elem>(to_compare_f(), ss.str());
     }
 };
 
@@ -547,6 +658,30 @@ public:
 private:
     double _tol;
 };
+
+template<typename Elem>
+class AbsExactVector : public WrappableVector<AbsExactVector<Elem>, Elem>
+{
+public:
+    AbsExactVector() {}
+    bool operator() (const std::vector<Elem>& in1,
+                     const std::vector<Elem>& in2) const
+    {
+        if (cv::norm(in1, in2, NORM_INF, cv::noArray()) != 0)
+        {
+            std::cout << "AbsExact error: G-API output and reference output vectors are not bitexact equal." << std::endl;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    friend std::ostream& operator<<(std::ostream& os, const AbsExactVector<Elem>&)
+    {
+        return os << "AbsExactVector()";
+    }
+};
 } // namespace opencv_test
 
 namespace
@@ -559,6 +694,12 @@ inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
 inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
 {
     return os << "compare_scalar_f";
+}
+
+template<typename Elem>
+inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_vector_f<Elem>&)
+{
+    return os << "compare_vector_f";
 }
 }  // anonymous namespace
 

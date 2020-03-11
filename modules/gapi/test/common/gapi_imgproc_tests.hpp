@@ -52,6 +52,17 @@ GAPI_TEST_FIXTURE(SobelXYTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,
 GAPI_TEST_FIXTURE(EqHistTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(CannyTest, initMatrixRandN, FIXTURE_API(CompareMats,double,double,int,bool), 5,
     cmpF, thrLow, thrUp, apSize, l2gr)
+GAPI_TEST_FIXTURE_NO_INIT(OptFlowLKTest, FIXTURE_API(tuple<CompareVectors<cv::Point2f>,
+                                                           CompareVectors<uchar>,
+                                                           CompareVectors<float>>,
+                                                     std::string,int,int,tuple<int,int>,int), 6,
+                          cmpFs, fileNamePattern, format, channels, nPoints,  winSize)
+
+GAPI_TEST_FIXTURE_NO_INIT(OptFlowPyrLKTest, FIXTURE_API(tuple<CompareVectors<cv::Point2f>,
+                                                              CompareVectors<uchar>,
+                                                              CompareVectors<float>>,
+                                                        std::string,int,int,tuple<int,int>,int,bool), 7,
+                          cmpFs, fileNamePattern, format, channels, nPoints,  winSize, withDeriv)
 GAPI_TEST_FIXTURE(RGB2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2YUVTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)

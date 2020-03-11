@@ -180,12 +180,23 @@ GAPI_OCV_KERNEL(GCPUCanny, cv::gapi::imgproc::GCanny)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::imgproc::GCalcOptFlowLK)
+{
+    static void run(const cv::Mat& prevImg, const cv::Mat& nextImg, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& predPts, const cv::Size& winSize, int maxLevel, const cv::TermCriteria& criteria, int flags, double minEigThresh, std::vector<cv::Point2f>& outPts, std::vector<uchar>& status, std::vector<float>& err)
+    {
+        if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
+            outPts = std::vector<cv::Point2f>(predPts);
+        cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, outPts, status, err, winSize, maxLevel, criteria, flags, minEigThresh);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUCalcOptFlowPyrLK, cv::gapi::imgproc::GCalcOptFlowPyrLK)
 {
-    static void run(const std::vector<cv::Mat>& prevImg, const std::vector<cv::Mat>& nextImg, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& predPts, cv::Size winSize, int maxLevel, cv::TermCriteria criteria, int flags, double minEigThresh, std::vector<cv::Point2f>& outPts, std::vector<uchar>& status, std::vector<double>& err)
+    static void run(const std::vector<cv::Mat>& prevPyr, const std::vector<cv::Mat>& nextPyr, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& predPts, const cv::Size& winSize, int maxLevel, const cv::TermCriteria& criteria, int flags, double minEigThresh, std::vector<cv::Point2f>& outPts, std::vector<uchar>& status, std::vector<float>& err)
     {
-        outPts = std::vector<cv::Point2f>(predPts);
-        cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, outPts, status, err, winSize, maxLevel, criteria, flags, minEigThresh);
+        if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
+            outPts = std::vector<cv::Point2f>(predPts);
+        cv::calcOpticalFlowPyrLK(prevPyr, nextPyr, prevPts, outPts, status, err, winSize, maxLevel, criteria, flags, minEigThresh);
     }
 };
 
@@ -369,6 +380,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUSobel
         , GCPUSobelXY
         , GCPUCanny
+        , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowPyrLK
         , GCPUEqualizeHist
         , GCPURGB2YUV

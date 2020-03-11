@@ -97,11 +97,19 @@ GMat Canny(const GMat& src, double thr1, double thr2, int apertureSize, bool l2g
     return imgproc::GCanny::on(src, thr1, thr2, apertureSize, l2gradient);
 }
 
-std::tuple<GArray<Point2f>, GArray<uchar>, GArray<double>> calcOpticalFlowPyrLK(const GArray<GMat>& prevImg,
-    const GArray<GMat>& nextImg, const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts, Size winSize,
-    int maxLevel, TermCriteria criteria, int flags, double minEigThresh)
+std::tuple<GArray<Point2f>, GArray<uchar>, GArray<float>> calcOpticalFlowPyrLK(const GMat& prevImg,
+    const GMat& nextImg, const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts, const Size& winSize,
+    int maxLevel, const TermCriteria& criteria, int flags, double minEigThresh)
 {
-    return imgproc::GCalcOptFlowPyrLK::on(prevImg, nextImg, prevPts, predPts, winSize, maxLevel,
+    return imgproc::GCalcOptFlowLK::on(prevImg, nextImg, prevPts, predPts, winSize, maxLevel,
+                                          criteria, flags, minEigThresh);
+}
+
+std::tuple<GArray<Point2f>, GArray<uchar>, GArray<float>> calcOpticalFlowPyrLK(const GArray<GMat>& prevPyr,
+    const GArray<GMat>& nextPyr, const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts, const Size& winSize,
+    int maxLevel, const TermCriteria& criteria, int flags, double minEigThresh)
+{
+    return imgproc::GCalcOptFlowPyrLK::on(prevPyr, nextPyr, prevPts, predPts, winSize, maxLevel,
                                           criteria, flags, minEigThresh);
 }
 
