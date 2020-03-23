@@ -33,10 +33,6 @@ class Dilate3x3PerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Siz
 class SobelPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int,int, cv::GCompileArgs>> {};
 class SobelXYPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
 class CannyPerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Size,double,double,int,bool, cv::GCompileArgs>> {};
-class OptFlowLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,compare_vector_f<uchar>,compare_vector_f<float>>,
-                                                      std::string,int,int,tuple<int,int>,int, cv::GCompileArgs>> {};
-class OptFlowPyrLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,compare_vector_f<uchar>,compare_vector_f<float>>,
-                                                         std::string,int,int,tuple<int,int>,int,bool, cv::GCompileArgs>> {};
 class EqHistPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
 class RGB2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
 class BGR2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
@@ -50,5 +46,22 @@ class YUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCo
 class RGB2HSVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BayerGR2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2YUV422PerfTest  : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-}
+} // opencv_test
+
+// TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests.hpp
+#include "../../test/common/gapi_video_tests_common.hpp"
+namespace opencv_test
+{
+class OptFlowLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,
+                                                            compare_vector_f<uchar>,
+                                                            compare_vector_f<float>>,
+                                                      std::string,int,int,tuple<size_t,size_t>,
+                                                      int,cv::GCompileArgs>> {};
+class OptFlowLKForPyrPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,
+                                                               compare_vector_f<uchar>,
+                                                               compare_vector_f<float>>,
+                                                         std::string,int,int,
+                                                         tuple<size_t,size_t>,int,bool,
+                                                         cv::GCompileArgs>> {};
+} // opencv_test
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP

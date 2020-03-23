@@ -97,22 +97,6 @@ GMat Canny(const GMat& src, double thr1, double thr2, int apertureSize, bool l2g
     return imgproc::GCanny::on(src, thr1, thr2, apertureSize, l2gradient);
 }
 
-std::tuple<GArray<Point2f>, GArray<uchar>, GArray<float>> calcOpticalFlowPyrLK(const GMat& prevImg,
-    const GMat& nextImg, const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts, const Size& winSize,
-    int maxLevel, const TermCriteria& criteria, int flags, double minEigThresh)
-{
-    return imgproc::GCalcOptFlowLK::on(prevImg, nextImg, prevPts, predPts, winSize, maxLevel,
-                                          criteria, flags, minEigThresh);
-}
-
-std::tuple<GArray<Point2f>, GArray<uchar>, GArray<float>> calcOpticalFlowPyrLK(const GArray<GMat>& prevPyr,
-    const GArray<GMat>& nextPyr, const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts, const Size& winSize,
-    int maxLevel, const TermCriteria& criteria, int flags, double minEigThresh)
-{
-    return imgproc::GCalcOptFlowPyrLK::on(prevPyr, nextPyr, prevPts, predPts, winSize, maxLevel,
-                                          criteria, flags, minEigThresh);
-}
-
 GMat RGB2Gray(const GMat& src)
 {
     return imgproc::GRGB2Gray::on(src);
@@ -193,6 +177,30 @@ GMatP NV12toRGBp(const GMat &y, const GMat &uv)
 GMatP NV12toBGRp(const GMat &y, const GMat &uv)
 {
     return imgproc::GNV12toBGRp::on(y, uv);
+}
+
+// TODO: move to the separate file modules/gapi/src/api/kernels_video.cpp
+video::GOptFlowLKOutput calcOpticalFlowPyrLK(const GMat& prevImg, const GMat& nextImg,
+                                             const video::GPoint2fArray& prevPts,
+                                             const video::GPoint2fArray& predPts,
+                                             const Size& winSize, int maxLevel,
+                                             const TermCriteria& criteria, int flags,
+                                             double minEigThresh)
+{
+    return video::GCalcOptFlowLK::on(prevImg, nextImg, prevPts, predPts, winSize, maxLevel,
+                                     criteria, flags, minEigThresh);
+}
+
+video::GOptFlowLKOutput calcOpticalFlowPyrLK(const video::GGMatArray& prevPyr,
+                                             const video::GGMatArray& nextPyr,
+                                             const video::GPoint2fArray& prevPts,
+                                             const video::GPoint2fArray& predPts,
+                                             const Size& winSize, int maxLevel,
+                                             const TermCriteria& criteria, int flags,
+                                             double minEigThresh)
+{
+    return video::GCalcOptFlowLKForPyr::on(prevPyr, nextPyr, prevPts, predPts, winSize, maxLevel,
+                                           criteria, flags, minEigThresh);
 }
 
 } //namespace gapi

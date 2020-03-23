@@ -52,25 +52,6 @@ namespace opencv_test
               rgb2yuyv(in_line_p, out_line_p, in.cols);
           }
       }
-
-      void FormTrackingPointsArray(vector<Point2f>& points, int width, int height, int nPointsX, int nPointsY)
-      {
-          int stepX = width / nPointsX;
-          int stepY = height / nPointsY;
-          if (stepX < 1 || stepY < 1) FAIL() << "Specified points number is too big";
-
-          points.clear();
-          points.reserve(nPointsX * nPointsY);
-
-          for (int x = stepX / 2; x < width; x += stepX)
-          {
-              for (int y = stepY / 2; y < height; y += stepY)
-              {
-                  Point2f pt(static_cast<float>(x), static_cast<float>(y));
-                  points.push_back(pt);
-              }
-          }
-      }
   }
 //------------------------------------------------------------------------------
 
@@ -641,201 +622,6 @@ PERF_TEST_P_(CannyPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
-PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
-{
-    initTestDataPath();
-
-    std::tuple<compare_vector_f<cv::Point2f>,compare_vector_f<uchar>,compare_vector_f<float>> cmpFs;
-
-    std::string fileNamePattern = "";
-    int format = 0, channels = 0, winSize = 0;
-    std::tuple<int,int> nPoints;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpFs, fileNamePattern, format, channels, nPoints, winSize, compile_args) = GetParam();
-
-    int maxLevel = 2, flags = 0;
-    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
-    double minEigThreshold = 1e-4;
-
-    switch (channels)
-    {
-        case 1:
-            in_mat1 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format)),
-                                 cv::IMREAD_GRAYSCALE);
-            in_mat2 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format + 1)),
-                                 cv::IMREAD_GRAYSCALE);
-            break;
-        case 3:
-            in_mat1 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format)));
-            in_mat2 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format + 1)));
-            break;
-        case 4:
-            cvtColor(cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format))),
-                     in_mat1, cv::COLOR_BGR2BGRA);
-            cvtColor(cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format + 1))),
-                     in_mat2, cv::COLOR_BGR2BGRA);
-            break;
-        default:
-            FAIL() << "Unexpected number of channels: " << channels;
-    }
-
-    int nPointsX = std::min(std::get<0>(nPoints), in_mat1.cols);
-    int nPointsY = std::min(std::get<1>(nPoints), in_mat1.rows);
-
-    std::vector<cv::Point2f> in_vec_pts, out_vec_pts_ocv, out_vec_pts_gapi;
-    std::vector<uchar> out_vec_status_ocv, out_vec_status_gapi;
-    std::vector<float> out_vec_err_ocv, out_vec_err_gapi;
-
-    FormTrackingPointsArray(in_vec_pts, in_mat1.cols, in_mat1.rows, nPointsX, nPointsY);
-    out_vec_pts_ocv.resize(in_vec_pts.size());
-    out_vec_pts_gapi.resize(in_vec_pts.size());
-    out_vec_status_ocv.resize(in_vec_pts.size());
-    out_vec_status_gapi.resize(in_vec_pts.size());
-    out_vec_err_ocv.resize(in_vec_pts.size());
-    out_vec_err_gapi.resize(in_vec_pts.size());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    {
-        cv::calcOpticalFlowPyrLK(in_mat1, in_mat2, in_vec_pts, out_vec_pts_ocv, out_vec_status_ocv,
-                                 out_vec_err_ocv, cv::Size(winSize, winSize), maxLevel, criteria,
-                                 flags, minEigThreshold);
-    }
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat inPrev, inNext;
-    cv::GArray<cv::Point2f> inPts, predPts;
-    auto out = cv::gapi::calcOpticalFlowPyrLK(inPrev, inNext, inPts, predPts,
-                                              cv::Size(winSize, winSize), maxLevel, criteria,
-                                              flags, minEigThreshold);
-    cv::GComputation c(cv::GIn(inPrev, inNext, inPts, predPts),
-                       cv::GOut(std::get<0>(out), std::get<1>(out), std::get<2>(out)));
-
-    // Warm-up graph engine:
-    c.apply(cv::gin(in_mat1, in_mat2, in_vec_pts, std::vector<cv::Point2f>()),
-            cv::gout(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi),
-            std::move(compile_args));
-
-    declare.in(in_mat1, in_mat2, in_vec_pts).out(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi);
-
-    TEST_CYCLE()
-    {
-        c.apply(cv::gin(in_mat1, in_mat2, in_vec_pts, std::vector<cv::Point2f>()),
-                cv::gout(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi));
-    }
-
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(std::get<0>(cmpFs)(out_vec_pts_gapi, out_vec_pts_ocv) &&
-                    std::get<1>(cmpFs)(out_vec_status_gapi, out_vec_status_ocv) &&
-                    std::get<2>(cmpFs)(out_vec_err_gapi, out_vec_err_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-
-}
-
-//------------------------------------------------------------------------------
-
-PERF_TEST_P_(OptFlowPyrLKPerfTest, TestPerformance)
-{
-    initTestDataPath();
-
-    std::tuple<compare_vector_f<cv::Point2f>,compare_vector_f<uchar>,compare_vector_f<float>> cmpFs;
-
-    std::string fileNamePattern = "";
-    int format = 0, channels = 0, winSize = 0;
-    std::tuple<int,int> nPoints;
-    bool withDeriv = false;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpFs, fileNamePattern, format, channels, nPoints, winSize, withDeriv, compile_args) = GetParam();
-
-    int maxLevel = 2, flags = 0;
-    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
-    double minEigThreshold = 1e-4;
-
-    switch (channels)
-    {
-        case 1:
-            in_mat1 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format)),
-                                 cv::IMREAD_GRAYSCALE);
-            in_mat2 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format + 1)),
-                                 cv::IMREAD_GRAYSCALE);
-            break;
-        case 3:
-            in_mat1 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format)));
-            in_mat2 = cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format + 1)));
-            break;
-        case 4:
-            cvtColor(cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format))),
-                     in_mat1, cv::COLOR_BGR2BGRA);
-            cvtColor(cv::imread(getDataPath(cv::format(fileNamePattern.c_str(), format + 1))),
-                     in_mat2, cv::COLOR_BGR2BGRA);
-            break;
-        default:
-            FAIL() << "Unexpected number of channels: " << channels;
-    }
-
-    std::vector<cv::Mat> in_pyr1, in_pyr2;
-    maxLevel = cv::buildOpticalFlowPyramid(in_mat1, in_pyr1, cv::Size(winSize, winSize),
-                                           maxLevel, withDeriv);
-    maxLevel = cv::buildOpticalFlowPyramid(in_mat2, in_pyr2, cv::Size(winSize, winSize),
-                                           maxLevel, withDeriv);
-
-    int nPointsX = std::min(std::get<0>(nPoints), in_mat1.cols);
-    int nPointsY = std::min(std::get<1>(nPoints), in_mat1.rows);
-
-    std::vector<cv::Point2f> in_vec_pts, out_vec_pts_ocv, out_vec_pts_gapi;
-    std::vector<uchar> out_vec_status_ocv, out_vec_status_gapi;
-    std::vector<float> out_vec_err_ocv, out_vec_err_gapi;
-
-    FormTrackingPointsArray(in_vec_pts, in_mat1.cols, in_mat1.rows, nPointsX, nPointsY);
-    out_vec_pts_ocv.resize(in_vec_pts.size());
-    out_vec_pts_gapi.resize(in_vec_pts.size());
-    out_vec_status_ocv.resize(in_vec_pts.size());
-    out_vec_status_gapi.resize(in_vec_pts.size());
-    out_vec_err_ocv.resize(in_vec_pts.size());
-    out_vec_err_gapi.resize(in_vec_pts.size());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    {
-        cv::calcOpticalFlowPyrLK(in_pyr1, in_pyr2, in_vec_pts, out_vec_pts_ocv, out_vec_status_ocv,
-                                 out_vec_err_ocv, cv::Size(winSize, winSize), maxLevel, criteria,
-                                 flags, minEigThreshold);
-    }
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::GMat> inPrev, inNext;
-    cv::GArray<cv::Point2f> inPts, predPts;
-    auto out = cv::gapi::calcOpticalFlowPyrLK(inPrev, inNext, inPts, predPts,
-                                              cv::Size(winSize, winSize), maxLevel, criteria,
-                                              flags, minEigThreshold);
-    cv::GComputation c(cv::GIn(inPrev, inNext, inPts, predPts),
-                       cv::GOut(std::get<0>(out), std::get<1>(out), std::get<2>(out)));
-
-    // Warm-up graph engine:
-    c.apply(cv::gin(in_pyr1, in_pyr2, in_vec_pts, std::vector<cv::Point2f>()),
-            cv::gout(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi),
-            std::move(compile_args));
-
-    declare.in(in_pyr1, in_pyr2, in_vec_pts).out(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi);
-
-    TEST_CYCLE()
-    {
-        c.apply(cv::gin(in_pyr1, in_pyr2, in_vec_pts, std::vector<cv::Point2f>()),
-                cv::gout(out_vec_pts_gapi, out_vec_status_gapi, out_vec_err_gapi));
-    }
-
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(std::get<0>(cmpFs)(out_vec_pts_gapi, out_vec_pts_ocv) &&
-                    std::get<1>(cmpFs)(out_vec_status_gapi, out_vec_status_ocv) &&
-                    std::get<2>(cmpFs)(out_vec_err_gapi, out_vec_err_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-
-}
-
-//------------------------------------------------------------------------------
-
 PERF_TEST_P_(EqHistPerfTest, TestPerformance)
 {
     compare_f cmpF = get<0>(GetParam());
@@ -1281,6 +1067,78 @@ PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
     EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     EXPECT_EQ(out_mat_gapi.size(), sz);
 
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+// TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests_inl.hpp
+namespace
+{
+    using Point2fVector = std::vector<cv::Point2f>;
+    using UcharVector   = std::vector<uchar>;
+    using FloatVector   = std::vector<float>;
+    using MatVector     = std::vector<cv::Mat>;
+
+    int maxLevel = 2, flags = 0;
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
+    double minEigThreshold = 1e-4;
+}
+
+PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
+{
+    auto out = testOptFlowLK(this, get<1>(GetParam()), get<2>(GetParam()), get<3>(GetParam()),
+                             get<4>(GetParam()), get<5>(GetParam()), get<6>(GetParam()), maxLevel,
+                             criteria, flags, minEigThreshold);
+    Point2fVector    inPts        = get<2>(out);
+    Point2fVector    outPtsOCV    = get<3>(out), outPtsGAPI    = get<7>(out);
+    UcharVector      outStatusOCV = get<4>(out), outStatusGAPI = get<8>(out);
+    FloatVector      outErrOCV    = get<5>(out), outErrGAPI    = get<9>(out);
+    cv::GComputation c            = get<6>(out);
+
+    declare.in(in_mat1, in_mat2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1, in_mat2, inPts, Point2fVector()),
+                cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI));
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(std::get<0>(get<0>(GetParam()))(outPtsGAPI,    outPtsOCV)    &&
+                    std::get<1>(get<0>(GetParam()))(outStatusGAPI, outStatusOCV) &&
+                    std::get<2>(get<0>(GetParam()))(outErrGAPI,    outErrOCV));
+    }
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
+{
+    auto out = testOptFlowLKForPyr(this, get<1>(GetParam()), get<2>(GetParam()), get<3>(GetParam()),
+                                get<4>(GetParam()), get<5>(GetParam()), get<6>(GetParam()),
+                                get<7>(GetParam()), maxLevel, criteria, flags, minEigThreshold);
+    MatVector        inPyr1       = get<0>(out), inPyr2       = get<1>(out);
+    Point2fVector    inPts        = get<2>(out);
+    Point2fVector    outPtsOCV    = get<3>(out), outPtsGAPI    = get<7>(out);
+    UcharVector      outStatusOCV = get<4>(out), outStatusGAPI = get<8>(out);
+    FloatVector      outErrOCV    = get<5>(out), outErrGAPI    = get<9>(out);
+    cv::GComputation c            = get<6>(out);
+
+    declare.in(inPyr1, inPyr2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(inPyr1, inPyr2, inPts, Point2fVector()),
+                cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI));
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(std::get<0>(get<0>(GetParam()))(outPtsGAPI,    outPtsOCV)    &&
+                    std::get<1>(get<0>(GetParam()))(outStatusGAPI, outStatusOCV) &&
+                    std::get<2>(get<0>(GetParam()))(outErrGAPI,    outErrOCV));
+    }
     SANITY_CHECK_NOTHING();
 }
 

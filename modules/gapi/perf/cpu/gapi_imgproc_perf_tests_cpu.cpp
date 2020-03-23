@@ -11,6 +11,9 @@
 
 #define IMGPROC_CPU cv::gapi::imgproc::cpu::kernels()
 
+// TODO: move to the separate file modules/gapi/perf/cpu/gapi_video_perf_tests_cpu.cpp
+#define VIDEO_CPU cv::gapi::video::cpu::kernels()
+
 namespace opencv_test
 {
 
@@ -134,31 +137,6 @@ INSTANTIATE_TEST_CASE_P(CannyPerfTestCPU, CannyPerfTest,
         Values(true, false),
         Values(cv::compile_args(IMGPROC_CPU))));
 
-INSTANTIATE_TEST_CASE_P(OptFlowLKPerfTestCPU, OptFlowLKPerfTest,
-                        Combine(Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_f(),
-                                                       AbsExactVector<uchar>().to_compare_f(),
-                                                       AbsExactVector<float>().to_compare_f())),
-                                Values("cv/optflow/frames/VGA_%02d.png",
-                                       "cv/optflow/frames/720p_%02d.png"),
-                                testing::Range(1, 3),
-                                Values(1, 3, 4),
-                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
-                                Values(7, 11),
-                                Values(cv::compile_args(IMGPROC_CPU))));
-
-INSTANTIATE_TEST_CASE_P(OptFlowPyrLKPerfTestCPU, OptFlowPyrLKPerfTest,
-                        Combine(Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_f(),
-                                                       AbsExactVector<uchar>().to_compare_f(),
-                                                       AbsExactVector<float>().to_compare_f())),
-                                Values("cv/optflow/frames/VGA_%02d.png",
-                                       "cv/optflow/frames/720p_%02d.png"),
-                                testing::Range(1, 3),
-                                Values(1, 3, 4),
-                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
-                                Values(7, 11),
-                                Values(true, false),
-                                Values(cv::compile_args(IMGPROC_CPU))));
-
 INSTANTIATE_TEST_CASE_P(EqHistPerfTestCPU, EqHistPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(szVGA, sz720p, sz1080p),
@@ -223,4 +201,30 @@ INSTANTIATE_TEST_CASE_P(RGB2YUV422PerfTestCPU, RGB2YUV422PerfTest,
         Combine(Values(ToleranceColor(1e-3).to_compare_f()),
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_CPU))));
+
+// TODO: move to the separate file modules/gapi/perf/cpu/gapi_video_perf_tests_cpu.cpp
+INSTANTIATE_TEST_CASE_P(OptFlowLKPerfTestCPU, OptFlowLKPerfTest,
+                        Combine(Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_f(),
+                                                       AbsExactVector<uchar>().to_compare_f(),
+                                                       AbsExactVector<float>().to_compare_f())),
+                                Values("cv/optflow/frames/VGA_%02d.png",
+                                       "cv/optflow/frames/720p_%02d.png"),
+                                testing::Range(1, 3),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11),
+                                Values(cv::compile_args(VIDEO_CPU))));
+
+INSTANTIATE_TEST_CASE_P(OptFlowLKForPyrPerfTestCPU, OptFlowLKForPyrPerfTest,
+                        Combine(Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_f(),
+                                                       AbsExactVector<uchar>().to_compare_f(),
+                                                       AbsExactVector<float>().to_compare_f())),
+                                Values("cv/optflow/frames/VGA_%02d.png",
+                                       "cv/optflow/frames/720p_%02d.png"),
+                                testing::Range(1, 3),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11),
+                                Values(true, false),
+                                Values(cv::compile_args(VIDEO_CPU))));
 }
