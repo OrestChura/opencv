@@ -155,7 +155,7 @@ public:
         }
     }
 
-    void initMatsFromImages(int channels, const std::string& fileNamePattern, int format)
+    void initMatsFromImage(int channels, const std::string& fileNamePattern, int format)
     {
         initTestDataPath();
         switch (channels)
@@ -198,7 +198,8 @@ public:
         {
             // Since G-API has no own test data (yet), it is taken from the common space
             const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-            GAPI_Assert(testDataPath != nullptr);
+            GAPI_Assert(testDataPath != nullptr &&
+            "OPENCV_TEST_DATA_PATH environment variable is either not set or set incorrectly.");
 
             cvtest::addDataSearchPath(testDataPath);
             initialized = true;

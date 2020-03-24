@@ -1073,27 +1073,30 @@ PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
 //------------------------------------------------------------------------------
 
 // TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests_inl.hpp
-namespace
+PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 {
     int maxLevel = 2, flags = 0;
     cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
     double minEigThreshold = 1e-4;
-}
 
-PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
-{
-    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
     UcharVector   outStatusOCV, outStatusGAPI;
-    FloatVector   outErrOCV,    outErrGAPI;
-    auto outOCVTuple  = std::make_tuple(outPtsOCV, outStatusOCV, outErrOCV);
-    auto outGAPITuple = std::make_tuple(outPtsGAPI, outStatusGAPI, outErrGAPI);
+    FloatVector   outErrOCV, outErrGAPI;
 
-    cv::GComputation c = callOptFlowLK(this, get<1>(GetParam()), get<2>(GetParam()),
-                                       get<3>(GetParam()), get<4>(GetParam()), get<5>(GetParam()),
-                                       get<6>(GetParam()), maxLevel, criteria, flags,
-                                       minEigThreshold, inPts, outOCVTuple, outGAPITuple);
+    auto outTupleOCV  = std::make_tuple(std::ref(outPtsOCV), std::ref(outStatusOCV),
+                                        std::ref(outErrOCV));
+    auto outTupleGAPI = std::make_tuple(std::ref(outPtsGAPI), std::ref(outStatusGAPI),
+                                        std::ref(outErrGAPI));
+
+    cv::GComputation c = runOCVnGAPIOptFlowLK(*this, { get<1>(GetParam()), get<2>(GetParam()),
+                                                       get<3>(GetParam()), get<4>(GetParam()),
+                                                       get<5>(GetParam()), maxLevel, criteria,
+                                                       flags, minEigThreshold,
+                                                       get<6>(GetParam()) },
+                                                       inPts, outTupleOCV, outTupleGAPI);
 
     declare.in(in_mat1, in_mat2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
     TEST_CYCLE()
     {
         c.apply(cv::gin(in_mat1, in_mat2, inPts, Point2fVector()),
@@ -1106,6 +1109,7 @@ PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
                     std::get<1>(get<0>(GetParam()))(outStatusGAPI, outStatusOCV) &&
                     std::get<2>(get<0>(GetParam()))(outErrGAPI,    outErrOCV));
     }
+
     SANITY_CHECK_NOTHING();
 }
 
@@ -1113,21 +1117,30 @@ PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 
 PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
 {
-    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
-    UcharVector   outStatusOCV, outStatusGAPI;
-    FloatVector   outErrOCV,    outErrGAPI;
-    MatVector     inPyr1,       inPyr2;
-    auto inTuple      = std::make_tuple(inPyr1, inPyr2, inPts);
-    auto outOCVTuple  = std::make_tuple(outPtsOCV, outStatusOCV, outErrOCV);
-    auto outGAPITuple = std::make_tuple(outPtsGAPI, outStatusGAPI, outErrGAPI);
+    int maxLevel = 2, flags = 0;
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
+    double minEigThreshold = 1e-4;
 
-    cv::GComputation c = callOptFlowLKForPyr(this, get<1>(GetParam()), get<2>(GetParam()),
-                                             get<3>(GetParam()), get<4>(GetParam()),
-                                             get<5>(GetParam()), get<6>(GetParam()),
-                                             get<7>(GetParam()), maxLevel, criteria, flags,
-                                             minEigThreshold, inTuple, outOCVTuple, outGAPITuple);
+    Point2fVector outPtsOCV, outPtsGAPI, inPts;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV, outErrGAPI;
+    MatVector     inPyr1, inPyr2;
+
+    auto inTuple      = std::make_tuple(std::ref(inPyr1), std::ref(inPyr2), std::ref(inPts));
+    auto outOCVTuple  = std::make_tuple(std::ref(outPtsOCV), std::ref(outStatusOCV),
+                                        std::ref(outErrOCV));
+    auto outGAPITuple = std::make_tuple(std::ref(outPtsGAPI), std::ref(outStatusGAPI),
+                                        std::ref(outErrGAPI));
+
+    cv::GComputation c = runOCVnGAPIOptFlowLKForPyr(*this, { get<1>(GetParam()), get<2>(GetParam()),
+                                                             get<3>(GetParam()), get<4>(GetParam()),
+                                                             get<5>(GetParam()), maxLevel, criteria,
+                                                             flags, minEigThreshold,
+                                                             get<7>(GetParam()) }, get<6>(GetParam()),
+                                                    inTuple, outOCVTuple, outGAPITuple);
 
     declare.in(inPyr1, inPyr2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
     TEST_CYCLE()
     {
         c.apply(cv::gin(inPyr1, inPyr2, inPts, Point2fVector()),
@@ -1140,6 +1153,7 @@ PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
                     std::get<1>(get<0>(GetParam()))(outStatusGAPI, outStatusOCV) &&
                     std::get<2>(get<0>(GetParam()))(outErrGAPI,    outErrOCV));
     }
+
     SANITY_CHECK_NOTHING();
 }
 

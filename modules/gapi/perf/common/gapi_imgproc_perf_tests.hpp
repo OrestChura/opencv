@@ -58,10 +58,10 @@ class OptFlowLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Poi
                                                       std::string,int,int,tuple<size_t,size_t>,
                                                       int,cv::GCompileArgs>> {};
 class OptFlowLKForPyrPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,
-                                                               compare_vector_f<uchar>,
-                                                               compare_vector_f<float>>,
-                                                         std::string,int,int,
-                                                         tuple<size_t,size_t>,int,bool,
-                                                         cv::GCompileArgs>> {};
+                                                                  compare_vector_f<uchar>,
+                                                                  compare_vector_f<float>>,
+                                                            std::string,int,int,
+                                                            tuple<size_t,size_t>,int,bool,
+                                                            cv::GCompileArgs>> {};
 } // opencv_test
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP
