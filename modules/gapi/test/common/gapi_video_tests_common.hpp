@@ -129,9 +129,9 @@ inline cv::GComputation runOCVnGAPIOptFlowLK(TestFunctional& testInst,
                                                         UcharVector&,
                                                         FloatVector&>& outGAPITuple)
 {
-    testInst.initMatsFromImage(testParams.channels,
-                               testParams.fileNamePattern,
-                               testParams.format);
+    testInst.initMatsFromImages(testParams.channels,
+                                testParams.fileNamePattern,
+                                testParams.format);
 
     auto inTuple = std::make_tuple(std::ref(testInst.in_mat1), std::ref(testInst.in_mat2),
                                    std::ref(inPts));
@@ -154,9 +154,9 @@ inline cv::GComputation runOCVnGAPIOptFlowLKForPyr(TestFunctional& testInst,
                                                               UcharVector&,
                                                               FloatVector&>& outGAPITuple)
 {        
-    testInst.initMatsFromImage(testParams.channels,
-                               testParams.fileNamePattern,
-                               testParams.format);
+    testInst.initMatsFromImages(testParams.channels,
+                                testParams.fileNamePattern,
+                                testParams.format);
 
     cv::Size winSize(testParams.winSize, testParams.winSize);
 

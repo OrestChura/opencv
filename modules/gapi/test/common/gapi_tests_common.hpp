@@ -155,7 +155,7 @@ public:
         }
     }
 
-    void initMatsFromImage(int channels, const std::string& fileNamePattern, int format)
+    void initMatsFromImages(int channels, const std::string& fileNamePattern, int format)
     {
         initTestDataPath();
         switch (channels)
