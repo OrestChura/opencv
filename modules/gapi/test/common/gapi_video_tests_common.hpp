@@ -99,12 +99,12 @@ cv::GComputation runOCVnGAPIOptFlowLK(size_t width, size_t height,
         cgv::GUcharArray   status;
         cgv::GFloatArray   error;
         std::tie(outPts, status, error) = cv::gapi::calcOpticalFlowPyrLK(inPrev, inNext,
-                                                                        inPts, predPts,
-                                                                        winSize,
-                                                                        testParams.maxLevel,
-                                                                        testParams.criteria,
-                                                                        testParams.flags,
-                                                                        testParams.minEigThreshold);
+                                                                         inPts, predPts,
+                                                                         winSize,
+                                                                         testParams.maxLevel,
+                                                                         testParams.criteria,
+                                                                         testParams.flags,
+                                                                         testParams.minEigThreshold);
 
         cv::GComputation c(cv::GIn(inPrev, inNext, inPts, predPts),
                            cv::GOut(outPts, status, error));

@@ -765,7 +765,7 @@ TEST_P(OptFlowLKTestForPyr, AccuracyTest)
     double minEigThreshold = 1e-4;
 
     MatVector     inPyr1, inPyr2;
-    Point2fVector outPtsOCV, outPtsGAPI, inPts;
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
     UcharVector   outStatusOCV, outStatusGAPI;
     FloatVector   outErrOCV, outErrGAPI;
 

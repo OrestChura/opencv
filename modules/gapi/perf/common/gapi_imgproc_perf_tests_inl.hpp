@@ -1121,7 +1121,7 @@ PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
     cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
     double minEigThreshold = 1e-4;
 
-    Point2fVector outPtsOCV, outPtsGAPI, inPts;
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
     UcharVector   outStatusOCV, outStatusGAPI;
     FloatVector   outErrOCV, outErrGAPI;
     MatVector     inPyr1, inPyr2;
