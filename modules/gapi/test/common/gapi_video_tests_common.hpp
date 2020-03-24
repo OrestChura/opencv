@@ -17,10 +17,7 @@ using UcharVector   = std::vector<uchar>;
 using FloatVector   = std::vector<float>;
 using MatVector     = std::vector<cv::Mat>;
 
-using GPoint2fArray = cv::GArray<cv::Point2f>;
-using GUcharArray   = cv::GArray<uchar>;
-using GFloatArray   = cv::GArray<float>;
-using GGMatArray    = cv::GArray<cv::GMat>;
+using namespace cv::gapi::video;
 }
 
 namespace opencv_test
@@ -55,28 +52,33 @@ void initTrackingPointsArray(Point2fVector& points, size_t width, size_t height,
 }
 
 template<typename Type, typename GType>
-std::tuple<Type,Type,Point2fVector,Point2fVector,UcharVector,FloatVector,cv::GComputation,
-           Point2fVector,UcharVector,FloatVector> calcOptFlowLK_OCVnGAPI(
-        Type in1, Type in2, size_t width, size_t height, std::tuple<size_t,size_t> pointsNum,
-        int winSize, cv::GCompileArgs compileArgs, int maxLevel, const cv::TermCriteria& criteria,
-        int flags, double minEigThreshold)
+cv::GComputation calcOptFlowLK_OCVnGAPI(size_t width, size_t height,
+                                        std::tuple<size_t,size_t> pointsNum, int winSize,
+                                        cv::GCompileArgs compileArgs, int maxLevel,
+                                        const cv::TermCriteria& criteria, int flags,
+                                        double minEigThreshold,
+                                        std::tuple<Type,Type,Point2fVector>& inTuple,
+                                        std::tuple<Point2fVector,
+                                                   UcharVector,
+                                                   FloatVector>& outOCVTuple,
+                                        std::tuple<Point2fVector,
+                                                   UcharVector,
+                                                   FloatVector>& outGAPITuple)
 {
-    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
-    UcharVector   outStatusOCV, outStatusGAPI;
-    FloatVector   outErrOCV,    outErrGAPI;
-
-    initTrackingPointsArray(inPts, width, height, std::get<0>(pointsNum), std::get<1>(pointsNum));
+    initTrackingPointsArray(std::get<2>(inTuple), width, height, std::get<0>(pointsNum),
+                            std::get<1>(pointsNum));
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::calcOpticalFlowPyrLK(in1, in2, inPts, outPtsOCV, outStatusOCV, outErrOCV,
-                                 cv::Size(winSize, winSize), maxLevel, criteria, flags,
-                                 minEigThreshold);
+        cv::calcOpticalFlowPyrLK(std::get<0>(inTuple), std::get<1>(inTuple), std::get<2>(inTuple),
+                                 std::get<0>(outOCVTuple), std::get<1>(outOCVTuple),
+                                 std::get<2>(outOCVTuple), cv::Size(winSize, winSize), maxLevel,
+                                 criteria, flags, minEigThreshold);
     }
 
     // G-API code //////////////////////////////////////////////////////////////
-    GType GinPrev, GinNext;
-    GPoint2fArray GinPts, GpredPts, GoutPts;
+    GType         GinPrev, GinNext;
+    GPoint2fArray GinPts,  GpredPts, GoutPts;
     GUcharArray   Gstatus;
     GFloatArray   Gerr;
     std::tie(GoutPts, Gstatus, Gerr) = cv::gapi::calcOpticalFlowPyrLK(GinPrev, GinNext, GinPts,
@@ -84,50 +86,64 @@ std::tuple<Type,Type,Point2fVector,Point2fVector,UcharVector,FloatVector,cv::GCo
                                                                       cv::Size(winSize, winSize),
                                                                       maxLevel, criteria, flags,
                                                                       minEigThreshold);
-    cv::GComputation c = cv::GComputation(cv::GIn(GinPrev, GinNext, GinPts, GpredPts),
-                                          cv::GOut(GoutPts, Gstatus, Gerr));
+    cv::GComputation c(cv::GIn(GinPrev, GinNext, GinPts, GpredPts),
+                       cv::GOut(GoutPts, Gstatus, Gerr));
 
     // Warm-up graph engine:
-    c.apply(cv::gin(in1, in2, inPts, Point2fVector()),
-            cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI),
+    c.apply(cv::gin(std::get<0>(inTuple), std::get<1>(inTuple), std::get<2>(inTuple),
+                    Point2fVector()),
+            cv::gout(std::get<0>(outGAPITuple), std::get<1>(outGAPITuple),
+                     std::get<2>(outGAPITuple)),
             std::move(compileArgs));
-    return std::make_tuple(in1, in2, inPts, outPtsOCV, outStatusOCV, outErrOCV, c, outPtsGAPI,
-                           outStatusGAPI, outErrGAPI);
 }
 
-inline std::tuple<cv::Mat,cv::Mat,Point2fVector,Point2fVector,UcharVector,FloatVector,
-                  cv::GComputation,Point2fVector,UcharVector,FloatVector> testOptFlowLK(
-        TestFunctional* const testInst, std::string fileNamePattern, int format, int channels,
-        std::tuple<size_t,size_t> pointsNum, int winSize, cv::GCompileArgs compile_args,
-        int maxLevel, const cv::TermCriteria& criteria, int flags, double minEigThreshold)
+inline cv::GComputation callOptFlowLK(TestFunctional* const testInst, std::string fileNamePattern,
+                                      int format, int channels, std::tuple<size_t,size_t> pointsNum,
+                                      int winSize, cv::GCompileArgs compileArgs, int maxLevel,
+                                      const cv::TermCriteria& criteria, int flags,
+                                      double minEigThreshold,
+                                      Point2fVector& inPts,
+                                      std::tuple<Point2fVector,
+                                                 UcharVector,
+                                                 FloatVector>& outOCVTuple,
+                                      std::tuple<Point2fVector,
+                                                 UcharVector,
+                                                 FloatVector>& outGAPITuple)
 {
     testInst->initMatsFromImages(channels, fileNamePattern, format);
-    return calcOptFlowLK_OCVnGAPI<cv::Mat, cv::GMat>(testInst->in_mat1, testInst->in_mat2,
-                                                     static_cast<size_t>(testInst->in_mat1.cols),
+    auto inTuple = std::make_tuple(testInst->in_mat1, testInst->in_mat2, inPts);
+    return calcOptFlowLK_OCVnGAPI<cv::Mat, cv::GMat>(static_cast<size_t>(testInst->in_mat1.cols),
                                                      static_cast<size_t>(testInst->in_mat1.rows),
-                                                     pointsNum, winSize, compile_args, maxLevel,
-                                                     criteria, flags, minEigThreshold);
+                                                     pointsNum, winSize, compileArgs, maxLevel,
+                                                     criteria, flags, minEigThreshold,
+                                                     inTuple, outOCVTuple, outGAPITuple);
 }
 
-inline std::tuple<MatVector,MatVector,Point2fVector,Point2fVector,UcharVector,FloatVector,
-                  cv::GComputation,Point2fVector,UcharVector,FloatVector>testOptFlowLKForPyr(
-        TestFunctional* const testInst, std::string fileNamePattern, int format, int channels,
-        std::tuple<size_t,size_t> pointsNum, int winSize, bool withDeriv,
-        cv::GCompileArgs compile_args, int maxLevel, const cv::TermCriteria& criteria, int flags,
-        double minEigThreshold)
+inline cv::GComputation callOptFlowLKForPyr(TestFunctional* const testInst,
+                                            std::string fileNamePattern, int format, int channels,
+                                            std::tuple<size_t,size_t> pointsNum, int winSize,
+                                            bool withDeriv, cv::GCompileArgs compileArgs,
+                                            int maxLevel, const cv::TermCriteria& criteria,
+                                            int flags, double minEigThreshold,
+                                            std::tuple<MatVector,MatVector,Point2fVector>& inTuple,
+                                            std::tuple<Point2fVector,
+                                                       UcharVector,
+                                                       FloatVector>& outOCVTuple,
+                                            std::tuple<Point2fVector,
+                                                       UcharVector,
+                                                       FloatVector>& outGAPITuple)
 {
     testInst->initMatsFromImages(channels, fileNamePattern, format);
 
-    MatVector in_pyr1, in_pyr2;
-    maxLevel = cv::buildOpticalFlowPyramid(testInst->in_mat1, in_pyr1, cv::Size(winSize, winSize),
-                                           maxLevel, withDeriv);
-    maxLevel = cv::buildOpticalFlowPyramid(testInst->in_mat2, in_pyr2, cv::Size(winSize, winSize),
-                                           maxLevel, withDeriv);
-    return calcOptFlowLK_OCVnGAPI<MatVector,GGMatArray>(in_pyr1, in_pyr2,
-                                                        static_cast<size_t>(testInst->in_mat1.cols),
+    maxLevel = cv::buildOpticalFlowPyramid(testInst->in_mat1, std::get<0>(inTuple),
+                                           cv::Size(winSize, winSize), maxLevel, withDeriv);
+    maxLevel = cv::buildOpticalFlowPyramid(testInst->in_mat2, std::get<1>(inTuple),
+                                           cv::Size(winSize, winSize), maxLevel, withDeriv);
+    return calcOptFlowLK_OCVnGAPI<MatVector,GGMatArray>(static_cast<size_t>(testInst->in_mat1.cols),
                                                         static_cast<size_t>(testInst->in_mat1.rows),
-                                                        pointsNum, winSize, compile_args, maxLevel,
-                                                        criteria, flags, minEigThreshold);
+                                                        pointsNum, winSize, compileArgs, maxLevel,
+                                                        criteria, flags, minEigThreshold,
+                                                        inTuple, outOCVTuple, outGAPITuple);
 }
 } // namespace
 } // namespace opencv_test

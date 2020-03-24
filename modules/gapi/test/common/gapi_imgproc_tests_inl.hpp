@@ -733,11 +733,6 @@ TEST_P(RGB2YUV422Test, AccuracyTest)
 // TODO: move to the separate file modules/gapi/test/common/gapi_video_tests_inl.hpp
 namespace
 {
-    using Point2fVector = std::vector<cv::Point2f>;
-    using UcharVector   = std::vector<uchar>;
-    using FloatVector   = std::vector<float>;
-    using MatVector     = std::vector<cv::Mat>;
-
     int maxLevel = 2, flags = 0;
     cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
     double minEigThreshold = 1e-4;
@@ -745,16 +740,15 @@ namespace
 
 TEST_P(OptFlowLKTest, AccuracyTest)
 {
-    Point2fVector outPtsOCV,    outPtsGAPI;
+    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
     UcharVector   outStatusOCV, outStatusGAPI;
     FloatVector   outErrOCV,    outErrGAPI;
+    auto outOCVTuple  = std::make_tuple(outPtsOCV, outStatusOCV, outErrOCV);
+    auto outGAPITuple = std::make_tuple(outPtsGAPI, outStatusGAPI, outErrGAPI);
 
-    std::tie(std::ignore, std::ignore, std::ignore, outPtsOCV, outStatusOCV, outErrOCV, std::ignore,
-             outPtsGAPI, outStatusGAPI, outErrGAPI) = testOptFlowLK(this, fileNamePattern, format,
-                                                                    channels, pointsNum, winSize,
-                                                                    getCompileArgs(), maxLevel,
-                                                                    criteria, flags,
-                                                                    minEigThreshold);
+    callOptFlowLK(this, fileNamePattern, format, channels, pointsNum, winSize, getCompileArgs(),
+                  maxLevel, criteria, flags, minEigThreshold, inPts, outOCVTuple, outGAPITuple);
+
     {
         EXPECT_TRUE(std::get<0>(cmpFs)(outPtsGAPI,    outPtsOCV)    &&
                     std::get<1>(cmpFs)(outStatusGAPI, outStatusOCV) &&
@@ -764,18 +758,17 @@ TEST_P(OptFlowLKTest, AccuracyTest)
 
 TEST_P(OptFlowLKTestForPyr, AccuracyTest)
 {
-    Point2fVector outPtsOCV,    outPtsGAPI;
+    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
     UcharVector   outStatusOCV, outStatusGAPI;
     FloatVector   outErrOCV,    outErrGAPI;
+    MatVector     inPyr1,       inPyr2;
+    auto inTuple      = std::make_tuple(inPyr1, inPyr2, inPts);
+    auto outOCVTuple  = std::make_tuple(outPtsOCV, outStatusOCV, outErrOCV);
+    auto outGAPITuple = std::make_tuple(outPtsGAPI, outStatusGAPI, outErrGAPI);
 
-    std::tie(std::ignore, std::ignore, std::ignore, outPtsOCV, outStatusOCV, outErrOCV, std::ignore,
-             outPtsGAPI, outStatusGAPI, outErrGAPI) = testOptFlowLKForPyr(this, fileNamePattern,
-                                                                          format, channels,
-                                                                          pointsNum, winSize,
-                                                                          withDeriv,
-                                                                          getCompileArgs(),
-                                                                          maxLevel, criteria, flags,
-                                                                          minEigThreshold);
+    callOptFlowLKForPyr(this, fileNamePattern, format, channels, pointsNum, winSize, withDeriv,
+                        getCompileArgs(), maxLevel, criteria, flags, minEigThreshold,
+                        inTuple, outOCVTuple, outGAPITuple);
     {
         EXPECT_TRUE(std::get<0>(cmpFs)(outPtsGAPI,    outPtsOCV)    &&
                     std::get<1>(cmpFs)(outStatusGAPI, outStatusOCV) &&

@@ -286,7 +286,7 @@ struct ParamsSpecific : public ParamsBase<std::tuple<cv::GCompileArgs(*)()>,
 
 // Base class for test fixtures
 template<typename AllParams>
-struct TestParamsBase : TestFunctional, TestWithParam<typename AllParams::params_t>
+struct TestWithParamsBase : TestFunctional, TestWithParam<typename AllParams::params_t>
 {
     // Get common (pre-defined) parameter value by index
     template<size_t I>
@@ -312,7 +312,7 @@ struct TestParamsBase : TestFunctional, TestWithParam<typename AllParams::params
 };
 
 template<typename... SpecificParams>
-struct TestParams : public TestParamsBase<Params<SpecificParams...>>
+struct TestWithParams : public TestWithParamsBase<Params<SpecificParams...>>
 {
     using AllParams = Params<SpecificParams...>;
 
@@ -322,14 +322,14 @@ struct TestParams : public TestParamsBase<Params<SpecificParams...>>
 };
 
 template<typename... SpecificParams>
-struct TestParamsSpecific : public TestParamsBase<ParamsSpecific<SpecificParams...>>
+struct TestWithParamsSpecific : public TestWithParamsBase<ParamsSpecific<SpecificParams...>>
 {
     using AllParams = ParamsSpecific<SpecificParams...>;
 };
 
 /**
  * @private
- * @brief Create G-API test fixture with TestParams base class
+ * @brief Create G-API test fixture with TestWithParams base class
  * @param Fixture   test fixture name
  * @param InitF     callable that will initialize default available members (from TestFunctional)
  * @param API       base class API. Specifies types of user-defined parameters. If there are no such
@@ -340,7 +340,7 @@ struct TestParamsSpecific : public TestParamsBase<ParamsSpecific<SpecificParams.
  *                  must be empty.
  */
 #define GAPI_TEST_FIXTURE(Fixture, InitF, API, Number, ...) \
-    struct Fixture : public TestParams API { \
+    struct Fixture : public TestWithParams API { \
         static_assert(Number == AllParams::specific_params_size, \
             "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
         __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
@@ -349,7 +349,7 @@ struct TestParamsSpecific : public TestParamsBase<ParamsSpecific<SpecificParams.
 
 /**
  * @private
- * @brief Create G-API test fixture with TestParamsSpecific base class
+ * @brief Create G-API test fixture with TestWithParamsSpecific base class
  *        This fixture has reduced number of common parameters and no initialization;
  *        it should be used if you don't need common parameters of GAPI_TEST_FIXTURE.
  * @param Fixture   test fixture name
@@ -361,7 +361,7 @@ struct TestParamsSpecific : public TestParamsBase<ParamsSpecific<SpecificParams.
  *                  must be empty.
  */
 #define GAPI_TEST_FIXTURE_SPEC_PARAMS(Fixture, API, Number, ...) \
-    struct Fixture : public TestParamsSpecific API { \
+    struct Fixture : public TestWithParamsSpecific API { \
         static_assert(Number == AllParams::specific_params_size, \
             "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
         __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \

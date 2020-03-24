@@ -1075,11 +1075,6 @@ PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
 // TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests_inl.hpp
 namespace
 {
-    using Point2fVector = std::vector<cv::Point2f>;
-    using UcharVector   = std::vector<uchar>;
-    using FloatVector   = std::vector<float>;
-    using MatVector     = std::vector<cv::Mat>;
-
     int maxLevel = 2, flags = 0;
     cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 7, 0.001);
     double minEigThreshold = 1e-4;
@@ -1087,14 +1082,16 @@ namespace
 
 PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 {
-    auto out = testOptFlowLK(this, get<1>(GetParam()), get<2>(GetParam()), get<3>(GetParam()),
-                             get<4>(GetParam()), get<5>(GetParam()), get<6>(GetParam()), maxLevel,
-                             criteria, flags, minEigThreshold);
-    Point2fVector    inPts        = get<2>(out);
-    Point2fVector    outPtsOCV    = get<3>(out), outPtsGAPI    = get<7>(out);
-    UcharVector      outStatusOCV = get<4>(out), outStatusGAPI = get<8>(out);
-    FloatVector      outErrOCV    = get<5>(out), outErrGAPI    = get<9>(out);
-    cv::GComputation c            = get<6>(out);
+    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV,    outErrGAPI;
+    auto outOCVTuple  = std::make_tuple(outPtsOCV, outStatusOCV, outErrOCV);
+    auto outGAPITuple = std::make_tuple(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
+    cv::GComputation c = callOptFlowLK(this, get<1>(GetParam()), get<2>(GetParam()),
+                                       get<3>(GetParam()), get<4>(GetParam()), get<5>(GetParam()),
+                                       get<6>(GetParam()), maxLevel, criteria, flags,
+                                       minEigThreshold, inPts, outOCVTuple, outGAPITuple);
 
     declare.in(in_mat1, in_mat2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
     TEST_CYCLE()
@@ -1116,15 +1113,19 @@ PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 
 PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
 {
-    auto out = testOptFlowLKForPyr(this, get<1>(GetParam()), get<2>(GetParam()), get<3>(GetParam()),
-                                get<4>(GetParam()), get<5>(GetParam()), get<6>(GetParam()),
-                                get<7>(GetParam()), maxLevel, criteria, flags, minEigThreshold);
-    MatVector        inPyr1       = get<0>(out), inPyr2       = get<1>(out);
-    Point2fVector    inPts        = get<2>(out);
-    Point2fVector    outPtsOCV    = get<3>(out), outPtsGAPI    = get<7>(out);
-    UcharVector      outStatusOCV = get<4>(out), outStatusGAPI = get<8>(out);
-    FloatVector      outErrOCV    = get<5>(out), outErrGAPI    = get<9>(out);
-    cv::GComputation c            = get<6>(out);
+    Point2fVector outPtsOCV,    outPtsGAPI,    inPts;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV,    outErrGAPI;
+    MatVector     inPyr1,       inPyr2;
+    auto inTuple      = std::make_tuple(inPyr1, inPyr2, inPts);
+    auto outOCVTuple  = std::make_tuple(outPtsOCV, outStatusOCV, outErrOCV);
+    auto outGAPITuple = std::make_tuple(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
+    cv::GComputation c = callOptFlowLKForPyr(this, get<1>(GetParam()), get<2>(GetParam()),
+                                             get<3>(GetParam()), get<4>(GetParam()),
+                                             get<5>(GetParam()), get<6>(GetParam()),
+                                             get<7>(GetParam()), maxLevel, criteria, flags,
+                                             minEigThreshold, inTuple, outOCVTuple, outGAPITuple);
 
     declare.in(inPyr1, inPyr2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
     TEST_CYCLE()
