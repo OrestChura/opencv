@@ -187,5 +187,29 @@ GMatP NV12toBGRp(const GMat &y, const GMat &uv)
     return imgproc::GNV12toBGRp::on(y, uv);
 }
 
+// TODO: move to the separate file modules/gapi/src/api/kernels_video.cpp
+video::GOptFlowLKOutput calcOpticalFlowPyrLK(const GMat& prevImg, const GMat& nextImg,
+                                             const video::GPoint2fArray& prevPts,
+                                             const video::GPoint2fArray& predPts,
+                                             const Size& winSize, int maxLevel,
+                                             const TermCriteria& criteria, int flags,
+                                             double minEigThresh)
+{
+    return video::GCalcOptFlowLK::on(prevImg, nextImg, prevPts, predPts, winSize, maxLevel,
+                                     criteria, flags, minEigThresh);
+}
+
+video::GOptFlowLKOutput calcOpticalFlowPyrLK(const video::GGMatArray& prevPyr,
+                                             const video::GGMatArray& nextPyr,
+                                             const video::GPoint2fArray& prevPts,
+                                             const video::GPoint2fArray& predPts,
+                                             const Size& winSize, int maxLevel,
+                                             const TermCriteria& criteria, int flags,
+                                             double minEigThresh)
+{
+    return video::GCalcOptFlowLKForPyr::on(prevPyr, nextPyr, prevPts, predPts, winSize, maxLevel,
+                                           criteria, flags, minEigThresh);
+}
+
 } //namespace gapi
 } //namespace cv

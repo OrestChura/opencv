@@ -26,6 +26,12 @@ namespace {
         }
         return in;
     }
+
+// TODO: move to the separate file modules/gapi/src/backends/cpu/gcpuvideo.cpp
+    using Point2fVector = std::vector<cv::Point2f>;
+    using UcharVector   = std::vector<uchar>;
+    using FloatVector   = std::vector<float>;
+    using MatVector     = std::vector<cv::Mat>;
 }
 
 GAPI_OCV_KERNEL(GCPUSepFilter, cv::gapi::imgproc::GSepFilter)
@@ -398,6 +404,36 @@ GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
     }
 };
 
+// TODO: move to the separate file modules/gapi/src/backends/cpu/gcpuvideo.cpp
+GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
+{
+    static void run(const cv::Mat& prevImg, const cv::Mat& nextImg, const Point2fVector& prevPts,
+                    const Point2fVector& predPts, const cv::Size& winSize, int maxLevel,
+                    const cv::TermCriteria& criteria, int flags, double minEigThresh,
+                    Point2fVector& outPts, UcharVector& status, FloatVector& err)
+    {
+        if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
+            outPts = predPts;
+        cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, outPts, status, err, winSize, maxLevel,
+                                 criteria, flags, minEigThresh);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
+{
+    static void run(const MatVector& prevPyr, const MatVector& nextPyr,
+                    const Point2fVector& prevPts, const Point2fVector& predPts,
+                    const cv::Size& winSize, int maxLevel, const cv::TermCriteria& criteria,
+                    int flags, double minEigThresh,
+                    Point2fVector& outPts, UcharVector& status, FloatVector& err)
+    {
+        if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
+            outPts = predPts;
+        cv::calcOpticalFlowPyrLK(prevPyr, nextPyr, prevPts, outPts, status, err, winSize, maxLevel,
+                                 criteria, flags, minEigThresh);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -433,6 +469,16 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUNV12toBGRp
         , GCPUNV12toGray
         , GCPUConcatYUVPlanes
+        >();
+    return pkg;
+}
+
+// TODO: move to the separate file modules/gapi/src/backends/cpu/gcpuvideo.cpp
+cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
+{
+    static auto pkg = cv::gapi::kernels
+        < GCPUCalcOptFlowLK
+        , GCPUCalcOptFlowLKForPyr
         >();
     return pkg;
 }

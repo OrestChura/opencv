@@ -757,6 +757,59 @@ TEST_P(RGB2YUV422Test, AccuracyTest)
     }
 }
 
+// TODO: move to the separate file modules/gapi/test/common/gapi_video_tests_inl.hpp
+TEST_P(OptFlowLKTest, AccuracyTest)
+{
+    int maxLevel = 5, flags = 0, format = 1;
+    double minEigThreshold = 1e-4;
+
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV, outErrGAPI;
+
+    auto outTupleOCV  = std::make_tuple(std::ref(outPtsOCV), std::ref(outStatusOCV),
+                                        std::ref(outErrOCV));
+    auto outTupleGAPI = std::make_tuple(std::ref(outPtsGAPI), std::ref(outStatusGAPI),
+                                        std::ref(outErrGAPI));
+
+    runOCVnGAPIOptFlowLK(*this, { fileNamePattern, format, channels, pointsNum,
+                                  winSize, maxLevel, criteria, flags, minEigThreshold,
+                                  getCompileArgs() },
+                         inPts, outTupleOCV, outTupleGAPI);
+
+    {
+        EXPECT_TRUE(std::get<0>(cmpFs)(outPtsGAPI,    outPtsOCV)    &&
+                    std::get<1>(cmpFs)(outStatusGAPI, outStatusOCV) &&
+                    std::get<2>(cmpFs)(outErrGAPI,    outErrOCV));
+    }
+}
+
+TEST_P(OptFlowLKTestForPyr, AccuracyTest)
+{
+    int maxLevel = 5, flags = 0, format = 1;
+    double minEigThreshold = 1e-4;
+
+    MatVector     inPyr1, inPyr2;
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV, outErrGAPI;
+
+    auto inTuple      = std::make_tuple(std::ref(inPyr1), std::ref(inPyr2), std::ref(inPts));
+    auto outTupleOCV  = std::make_tuple(std::ref(outPtsOCV), std::ref(outStatusOCV),
+                                        std::ref(outErrOCV));
+    auto outTupleGAPI = std::make_tuple(std::ref(outPtsGAPI), std::ref(outStatusGAPI),
+                                        std::ref(outErrGAPI));
+
+    runOCVnGAPIOptFlowLKForPyr(*this, { fileNamePattern, format, channels, pointsNum,
+                                       winSize, maxLevel, criteria, flags, minEigThreshold,
+                                       getCompileArgs() },
+                               withDeriv, inTuple, outTupleOCV, outTupleGAPI);
+    {
+        EXPECT_TRUE(std::get<0>(cmpFs)(outPtsGAPI,    outPtsOCV)    &&
+                    std::get<1>(cmpFs)(outStatusGAPI, outStatusOCV) &&
+                    std::get<2>(cmpFs)(outErrGAPI,    outErrOCV));
+    }
+}
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_TESTS_INL_HPP

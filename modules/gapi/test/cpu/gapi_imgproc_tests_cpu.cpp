@@ -13,6 +13,9 @@
 namespace
 {
 #define IMGPROC_CPU [] () { return cv::compile_args(cv::gapi::imgproc::cpu::kernels()); }
+
+// TODO: move to the separate file modules/gapi/test/cpu/gapi_video_tests_cpu.cpp
+#define VIDEO_CPU [] () { return cv::compile_args(cv::gapi::video::cpu::kernels()); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -331,4 +334,36 @@ INSTANTIATE_TEST_CASE_P(RGB2YUV422TestCPU, RGB2YUV422Test,
                                 Values(CV_8UC2),
                                 Values(IMGPROC_CPU),
                                 Values(AbsTolerance(1).to_compare_obj())));
+
+// TODO: move to the separate file modules/gapi/test/cpu/gapi_video_tests_cpu.cpp
+INSTANTIATE_TEST_CASE_P(OptFlowLKTestCPU, OptFlowLKTest,
+                        Combine(Values(VIDEO_CPU),
+                                Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_obj(),
+                                                       AbsExactVector<uchar>().to_compare_obj(),
+                                                       AbsExactVector<float>().to_compare_obj())),
+                                Values("cv/optflow/frames/1080p_%02d.png",
+                                       "cv/optflow/rock_%01d.bmp"),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11, 21),
+                                Values(cv::TermCriteria(cv::TermCriteria::COUNT |
+                                                        cv::TermCriteria::EPS, 7, 0.001),
+                                       cv::TermCriteria(cv::TermCriteria::COUNT |
+                                                        cv::TermCriteria::EPS, 30, 0.01))));
+
+INSTANTIATE_TEST_CASE_P(OptFlowLKTestForPyrCPU, OptFlowLKTestForPyr,
+                        Combine(Values(VIDEO_CPU),
+                                Values(std::make_tuple(AbsExactVector<cv::Point2f>().to_compare_obj(),
+                                                       AbsExactVector<uchar>().to_compare_obj(),
+                                                       AbsExactVector<float>().to_compare_obj())),
+                                Values("cv/optflow/frames/1080p_%02d.png",
+                                       "cv/optflow/rock_%01d.bmp"),
+                                Values(1, 3, 4),
+                                Values(std::make_tuple(9, 9), std::make_tuple(15, 15)),
+                                Values(7, 11, 21),
+                                Values(cv::TermCriteria(cv::TermCriteria::COUNT |
+                                                        cv::TermCriteria::EPS, 7, 0.001),
+                                       cv::TermCriteria(cv::TermCriteria::COUNT |
+                                                        cv::TermCriteria::EPS, 30, 0.01)),
+                                testing::Bool()));
 } // opencv_test

@@ -46,5 +46,22 @@ class YUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCo
 class RGB2HSVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BayerGR2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2YUV422PerfTest  : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-}
+} // opencv_test
+
+// TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests.hpp
+#include "../../test/common/gapi_video_tests_common.hpp"
+namespace opencv_test
+{
+class OptFlowLKPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,
+                                                            compare_vector_f<uchar>,
+                                                            compare_vector_f<float>>,
+                                                      std::string,int,tuple<size_t,size_t>,
+                                                      int,cv::TermCriteria,cv::GCompileArgs>> {};
+class OptFlowLKForPyrPerfTest : public TestPerfParams<tuple<tuple<compare_vector_f<Point2f>,
+                                                                  compare_vector_f<uchar>,
+                                                                  compare_vector_f<float>>,
+                                                            std::string,int,tuple<size_t,size_t>,
+                                                            int,cv::TermCriteria,bool,
+                                                            cv::GCompileArgs>> {};
+} // opencv_test
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP

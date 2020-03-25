@@ -20,6 +20,15 @@ GAPI_EXPORTS GKernelPackage kernels();
 
 } // namespace cpu
 } // namespace imgproc
+
+// TODO: move to the separate file modules/gapi/include/opencv2/gapi/cpu/video.hpp
+namespace video {
+namespace cpu {
+
+GAPI_EXPORTS GKernelPackage kernels();
+
+} // namespace cpu
+} // namespace video
 } // namespace gapi
 } // namespace cv
 

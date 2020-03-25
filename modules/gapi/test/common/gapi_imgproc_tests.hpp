@@ -72,4 +72,25 @@ GAPI_TEST_FIXTURE(BayerGR2RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1,
 GAPI_TEST_FIXTURE(RGB2YUV422Test, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 } // opencv_test
 
+// TODO: move to the separate file modules/gapi/test/common/gapi_video_tests.hpp
+#include "gapi_video_tests_common.hpp"
+namespace opencv_test
+{
+GAPI_TEST_FIXTURE_SPEC_PARAMS(OptFlowLKTest, FIXTURE_API(tuple<CompareVectors<cv::Point2f>,
+                                                               CompareVectors<uchar>,
+                                                               CompareVectors<float>>,
+                                                         std::string,int,tuple<size_t,size_t>,
+                                                         int,cv::TermCriteria),
+                              6, cmpFs, fileNamePattern, channels, pointsNum, winSize, criteria)
+
+GAPI_TEST_FIXTURE_SPEC_PARAMS(OptFlowLKTestForPyr, FIXTURE_API(tuple<CompareVectors<cv::Point2f>,
+                                                                  CompareVectors<uchar>,
+                                                                  CompareVectors<float>>,
+                                                               std::string,int,
+                                                               tuple<size_t,size_t>,
+                                                               int,cv::TermCriteria,bool),
+                              7, cmpFs, fileNamePattern, channels, pointsNum, winSize, criteria,
+                              withDeriv)
+} // opencv_test
+
 #endif //OPENCV_GAPI_IMGPROC_TESTS_HPP

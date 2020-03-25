@@ -10,6 +10,9 @@
 
 #include <opencv2/imgproc.hpp>
 
+// TODO:  move to the separate file modules/gapi/include/opencv2/gapi/video.hpp
+#include <opencv2/video.hpp>
+
 #include <utility> // std::tuple
 
 #include <opencv2/gapi/gkernel.hpp>
@@ -22,6 +25,10 @@
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
 @}
+ */
+
+// TODO: move to the separate file modules/gapi/include/opencv2/gapi/video.hpp
+/** \defgroup gapi_video G-API Optical Flow processing functionality
  */
 
 namespace cv { namespace gapi {
@@ -253,6 +260,35 @@ namespace imgproc {
 
 }
 
+// TODO: move to the separate file modules/gapi/include/opencv2/gapi/video.hpp
+namespace  video {
+    using GPoint2fArray        = cv::GArray<cv::Point2f>;
+    using GUcharArray          = cv::GArray<uchar>;
+    using GFloatArray          = cv::GArray<float>;
+    using GGMatArray           = cv::GArray<cv::GMat>;
+
+    using GOptFlowLKOutput     = std::tuple<GPoint2fArray, GUcharArray, GFloatArray>;
+    using GOptFlowLKOutputDesc = std::tuple<GArrayDesc, GArrayDesc, GArrayDesc>;
+
+    G_TYPED_KERNEL(GCalcOptFlowLK, <GOptFlowLKOutput(GMat,GMat,GPoint2fArray,GPoint2fArray,
+                                                     Size,int,TermCriteria,int,double)>,
+                   "org.opencv.video.calcOpticalFlowLK") {
+        static GOptFlowLKOutputDesc outMeta(GMatDesc, GMatDesc, GArrayDesc, GArrayDesc,
+                                            const Size&, int, const TermCriteria&, int, double) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GCalcOptFlowLKForPyr, <GOptFlowLKOutput(GGMatArray,GGMatArray,
+                                                           GPoint2fArray,GPoint2fArray,
+                                                           Size,int,TermCriteria,int,double)>,
+                   "org.opencv.video.calcOpticalFlowLKForPyr") {
+        static GOptFlowLKOutputDesc outMeta(GArrayDesc, GArrayDesc, GArrayDesc, GArrayDesc,
+                                            const Size&, int, const TermCriteria&, int, double) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+} //namespace video
 
 //! @addtogroup gapi_filters
 //! @{
@@ -943,6 +979,73 @@ image type is @ref CV_8UC1.
 GAPI_EXPORTS GMatP NV12toBGRp(const GMat &src_y, const GMat &src_uv);
 
 //! @} gapi_colorconvert
+
+// TODO: move to the separate file modules/gapi/include/opencv2/gapi/video.hpp
+//! @addtogroup gapi_video
+//! @{
+/** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade
+method with pyramids.
+
+See @cite Bouguet00 . The function is parallelized with the TBB library.
+
+@note Function textual ID is "org.opencv.video.calcOpticalFlowLK"
+
+@param prevImg first 8-bit input image or pyramid constructed by buildOpticalFlowPyramid.
+@param nextImg second input image or pyramid of the same size and the same type as prevImg.
+@param prevPts vector of 2D points for which the flow needs to be found; point coordinates must be
+single-precision floating-point numbers.
+@param predPts vector of 2D points initial for the flow search; make sense only when
+OPTFLOW_USE_INITIAL_FLOW flag is passed; in that case the vector must have the same size as in
+the input.
+@param winSize size of the search window at each pyramid level.
+@param maxLevel 0-based maximal pyramid level number; if set to 0, pyramids are not used (single
+level), if set to 1, two levels are used, and so on; if pyramids are passed to input then
+algorithm will use as many levels as pyramids have but no more than maxLevel.
+@param criteria parameter, specifying the termination criteria of the iterative search algorithm
+(after the specified maximum number of iterations criteria.maxCount or when the search window
+moves by less than criteria.epsilon).
+@param flags operation flags:
+ -   **OPTFLOW_USE_INITIAL_FLOW** uses initial estimations, stored in nextPts; if the flag is
+     not set, then prevPts is copied to nextPts and is considered the initial estimate.
+ -   **OPTFLOW_LK_GET_MIN_EIGENVALS** use minimum eigen values as an error measure (see
+     minEigThreshold description); if the flag is not set, then L1 distance between patches
+     around the original and a moved point, divided by number of pixels in a window, is used as a
+     error measure.
+@param minEigThresh the algorithm calculates the minimum eigen value of a 2x2 normal matrix of
+optical flow equations (this matrix is called a spatial gradient matrix in @cite Bouguet00), divided
+by number of pixels in a window; if this value is less than minEigThreshold, then a corresponding
+feature is filtered out and its flow is not processed, so it allows to remove bad points and get a
+performance boost.
+
+@return vector of 2D points (with single-precision floating-point coordinates)
+containing the calculated new positions of input features in the second image.
+@return status vector (of unsigned chars); each element of the vector is set to 1 if
+the flow for the corresponding features has been found, otherwise, it is set to 0.
+@return vector of errors; each element of the vector is set to an error for the
+corresponding feature, type of the error measure can be set in flags parameter; if the flow wasn't
+found then the error is not defined (use the status parameter to find such cases).
+ */
+GAPI_EXPORTS std::tuple<GArray<Point2f>, GArray<uchar>, GArray<float>> calcOpticalFlowPyrLK(
+        const GMat& prevImg, const GMat& nextImg,
+        const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts,
+        const Size& winSize = Size(21, 21), int maxLevel = 3,
+        const TermCriteria& criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS,
+                                                    30, 0.01),
+        int flags = 0, double minEigThresh = 1e-4);
+
+/**
+@overload
+@note Function textual ID is "org.opencv.video.calcOpticalFlowLKForPyr"
+*/
+GAPI_EXPORTS std::tuple<GArray<Point2f>, GArray<uchar>, GArray<float>> calcOpticalFlowPyrLK(
+        const GArray<GMat>& prevPyr, const GArray<GMat>& nextPyr,
+        const GArray<Point2f>& prevPts, const GArray<Point2f>& predPts,
+        const Size& winSize = Size(21, 21), int maxLevel = 3,
+        const TermCriteria& criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS,
+                                                    30, 0.01),
+        int flags = 0, double minEigThresh = 1e-4);
+
+//! @} gapi_video
 } //namespace gapi
 } //namespace cv
 

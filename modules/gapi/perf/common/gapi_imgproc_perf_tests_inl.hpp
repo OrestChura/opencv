@@ -1072,5 +1072,91 @@ PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+// TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests_inl.hpp
+PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
+{
+    int maxLevel = 5, flags = 0, format = 1;
+    double minEigThreshold = 1e-4;
+
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV, outErrGAPI;
+
+    auto outTupleOCV  = std::make_tuple(std::ref(outPtsOCV), std::ref(outStatusOCV),
+                                        std::ref(outErrOCV));
+    auto outTupleGAPI = std::make_tuple(std::ref(outPtsGAPI), std::ref(outStatusGAPI),
+                                        std::ref(outErrGAPI));
+
+    cv::GComputation c = runOCVnGAPIOptFlowLK(*this, { get<1>(GetParam()), format,
+                                                       get<2>(GetParam()), get<3>(GetParam()),
+                                                       get<4>(GetParam()), maxLevel,
+                                                       get<5>(GetParam()), flags, minEigThreshold,
+                                                       get<6>(GetParam()) },
+                                                       inPts, outTupleOCV, outTupleGAPI);
+
+    declare.in(in_mat1, in_mat2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1, in_mat2, inPts, Point2fVector()),
+                cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI));
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(std::get<0>(get<0>(GetParam()))(outPtsGAPI,    outPtsOCV)    &&
+                    std::get<1>(get<0>(GetParam()))(outStatusGAPI, outStatusOCV) &&
+                    std::get<2>(get<0>(GetParam()))(outErrGAPI,    outErrOCV));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
+{
+    int maxLevel = 5, flags = 0, format = 1;
+    double minEigThreshold = 1e-4;
+
+    Point2fVector inPts, outPtsOCV, outPtsGAPI;
+    UcharVector   outStatusOCV, outStatusGAPI;
+    FloatVector   outErrOCV, outErrGAPI;
+    MatVector     inPyr1, inPyr2;
+
+    auto inTuple      = std::make_tuple(std::ref(inPyr1), std::ref(inPyr2), std::ref(inPts));
+    auto outOCVTuple  = std::make_tuple(std::ref(outPtsOCV), std::ref(outStatusOCV),
+                                        std::ref(outErrOCV));
+    auto outGAPITuple = std::make_tuple(std::ref(outPtsGAPI), std::ref(outStatusGAPI),
+                                        std::ref(outErrGAPI));
+
+    cv::GComputation c = runOCVnGAPIOptFlowLKForPyr(*this, { get<1>(GetParam()), format,
+                                                             get<2>(GetParam()), get<3>(GetParam()),
+                                                             get<4>(GetParam()), maxLevel,
+                                                             get<5>(GetParam()), flags,
+                                                             minEigThreshold, get<7>(GetParam()) },
+                                                    get<6>(GetParam()),
+                                                    inTuple, outOCVTuple, outGAPITuple);
+
+    declare.in(inPyr1, inPyr2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(inPyr1, inPyr2, inPts, Point2fVector()),
+                cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI));
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(std::get<0>(get<0>(GetParam()))(outPtsGAPI,    outPtsOCV)    &&
+                    std::get<1>(get<0>(GetParam()))(outStatusGAPI, outStatusOCV) &&
+                    std::get<2>(get<0>(GetParam()))(outErrGAPI,    outErrOCV));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 }
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP
