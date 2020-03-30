@@ -1075,25 +1075,14 @@ PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
 // TODO: move to the separate file modules/gapi/perf/common/gapi_video_perf_tests_inl.hpp
 PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 {
-    int maxLevel = 5, flags = 0, format = 1;
-    double minEigThreshold = 1e-4;
-
-    int channels, winSize;
-    cv::TermCriteria criteria;
-    std::tuple<size_t,size_t> pointsNum;
-    std::string fileNamePattern;
-    cv::GCompileArgs compileArgs;
-
-    std::tie(std::ignore, fileNamePattern, channels, pointsNum,
-             winSize, criteria, compileArgs) = GetParam();
-
     std::vector<cv::Point2f> inPts, outPtsOCV, outPtsGAPI;
     std::vector<uchar>       outStatusOCV, outStatusGAPI;
     std::vector<float>       outErrOCV, outErrGAPI;
 
-    OptFlowLKTestParams params { fileNamePattern, format, channels, pointsNum,
-                                 winSize, maxLevel, criteria, flags, minEigThreshold,
-                                 compileArgs };
+    OptFlowLKTestParams params;
+    std::tie(std::ignore, params.fileNamePattern, params.channels,
+             params.pointsNum, params.winSize, params.criteria,
+             params.compileArgs) = GetParam();
 
     OptFlowLKTestOutput outOCV { outPtsOCV, outStatusOCV, outErrOCV };
     OptFlowLKTestOutput outGAPI { outPtsGAPI, outStatusGAPI, outErrGAPI };
@@ -1122,19 +1111,6 @@ PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 
 PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
 {
-    int maxLevel = 5, flags = 0, format = 1;
-    double minEigThreshold = 1e-4;
-
-    bool withDeriv;
-    int channels, winSize;
-    cv::TermCriteria criteria;
-    std::tuple<size_t,size_t> pointsNum;
-    std::string fileNamePattern;
-    cv::GCompileArgs compileArgs;
-
-    std::tie(std::ignore, fileNamePattern, channels, pointsNum,
-             winSize, criteria, withDeriv, compileArgs) = GetParam();
-
     std::vector<cv::Mat>     inPyr1, inPyr2;
     std::vector<cv::Point2f> inPts, outPtsOCV, outPtsGAPI;
     std::vector<uchar>       outStatusOCV, outStatusGAPI;
@@ -1142,9 +1118,12 @@ PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
 
     OptFlowLKTestInput<std::vector<cv::Mat>> in { inPyr1, inPyr2, inPts };
 
-    OptFlowLKTestParams params { fileNamePattern, format, channels, pointsNum,
-                                 winSize, maxLevel, criteria, flags, minEigThreshold,
-                                 compileArgs };
+    bool withDeriv;
+
+    OptFlowLKTestParams params;
+    std::tie(std::ignore, params.fileNamePattern, params.channels,
+             params.pointsNum, params.winSize, params.criteria,
+             withDeriv, params.compileArgs) = GetParam();
 
     OptFlowLKTestOutput outOCV { outPtsOCV, outStatusOCV, outErrOCV };
     OptFlowLKTestOutput outGAPI { outPtsGAPI, outStatusGAPI, outErrGAPI };

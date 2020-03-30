@@ -57,16 +57,27 @@ struct OptFlowLKTestOutput
 
 struct OptFlowLKTestParams
 {
-    const std::string& fileNamePattern;
+    OptFlowLKTestParams(): format(1), maxLevel(5), flags(0), minEigThreshold(1e-4) { }
+
+    OptFlowLKTestParams(const std::string& namePat, int fmt, int chans,
+                        const std::tuple<size_t, size_t>& ptsNum,
+                        int winSz, int maxLvl, const cv::TermCriteria& crit,
+                        int flgs, double minEigThresh, const cv::GCompileArgs& compArgs):
+                        fileNamePattern(namePat), format(fmt), channels(chans),
+                        pointsNum(ptsNum), winSize(winSz), maxLevel(maxLvl),
+                        criteria(crit), flags(flgs), minEigThreshold(minEigThresh),
+                        compileArgs(compArgs) { }
+
+    std::string fileNamePattern;
     int format;
     int channels;
-    const std::tuple<size_t,size_t>& pointsNum;
+    std::tuple<size_t,size_t> pointsNum;
     int winSize;
     int maxLevel;
-    const cv::TermCriteria& criteria;
+    cv::TermCriteria criteria;
     int flags;
     double minEigThreshold;
-    const cv::GCompileArgs& compileArgs;
+    cv::GCompileArgs compileArgs;
 };
 
 template<typename GType, typename Type>
@@ -98,13 +109,11 @@ cv::GComputation runOCVnGAPIOptFlowLK(OptFlowLKTestInput<Type>& in,
         cv::gapi::video::GPoint2fArray prevPts, predPts, nextPts;
         cv::gapi::video::GUcharArray   statuses;
         cv::gapi::video::GFloatArray   errors;
-        std::tie(nextPts, statuses, errors) = cv::gapi::calcOpticalFlowPyrLK(inPrev, inNext,
-                                                                             prevPts, predPts,
-                                                                             winSize,
-                                                                             params.maxLevel,
-                                                                             params.criteria,
-                                                                             params.flags,
-                                                                             params.minEigThreshold);
+        std::tie(nextPts, statuses, errors) = cv::gapi::calcOpticalFlowPyrLK(
+                                                    inPrev, inNext,
+                                                    prevPts, predPts, winSize,
+                                                    params.maxLevel, params.criteria,
+                                                    params.flags, params.minEigThreshold);
 
         cv::GComputation c(cv::GIn(inPrev, inNext, prevPts, predPts),
                            cv::GOut(nextPts, statuses, errors));
@@ -157,10 +166,12 @@ inline cv::GComputation runOCVnGAPIOptFlowLKForPyr(TestFunctional& testInst,
     OptFlowLKTestParams updatedParams(params);
     updatedParams.maxLevel = maxLevel;
 
-    return runOCVnGAPIOptFlowLK<cv::gapi::video::GGMatArray>(in,
+    return runOCVnGAPIOptFlowLK<cv::gapi::video::GGMatArray>(
+                                    in,
                                     static_cast<size_t>(testInst.in_mat1.cols),
                                     static_cast<size_t>(testInst.in_mat1.rows),
-                                    updatedParams, ocvOut, gapiOut);
+                                    updatedParams,
+                                    ocvOut, gapiOut);
 }
 } // namespace
 } // namespace opencv_test
