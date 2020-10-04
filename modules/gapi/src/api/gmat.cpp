@@ -137,4 +137,11 @@ bool GMatDesc::canDescribe(const cv::Mat& mat) const
     return canDescribeHelper(*this, mat);
 }
 
+bool GMatDesc::ifVector(int elemSize, int ddepth) const
+{
+    bool isDepth = (ddepth < 0) || (depth == ddepth);
+    return isDepth && ((chan == elemSize && (size.width == 1 || size.height == 1)) ||
+                       (chan == 1 && size.width == elemSize));
+}
+
 }// namespace cv

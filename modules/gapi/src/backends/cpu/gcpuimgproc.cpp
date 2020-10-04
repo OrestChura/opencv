@@ -211,6 +211,30 @@ GAPI_OCV_KERNEL(GCPUGoodFeatures, cv::gapi::imgproc::GGoodFeatures)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUBoundingRectMat, cv::gapi::imgproc::GBoundingRectMat)
+{
+    static void run(const cv::Mat& in, cv::Rect out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectVector32S, cv::gapi::imgproc::GBoundingRectVector32S)
+{
+    static void run(const std::vector<cv::Point2i>& in, cv::Rect out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectVector32F, cv::gapi::imgproc::GBoundingRectVector32F)
+{
+    static void run(const std::vector<cv::Point2f>& in, cv::Rect out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -445,6 +469,9 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUCanny
         , GCPUGoodFeatures
         , GCPUEqualizeHist
+        , GCPUBoundingRectMat
+        , GCPUBoundingRectVector32S
+        , GCPUBoundingRectVector32F
         , GCPURGB2YUV
         , GCPUYUV2RGB
         , GCPUNV12toRGB

@@ -21,6 +21,8 @@
 @{
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
+    @defgroup gapi_feature Graph API: Image Feature Detection
+    @defgroup gapi_shape Graph API: Image Structural Analysis and Shape Descriptors
 @}
  */
 
@@ -110,7 +112,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.canny"){
+    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny"){
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
         }
@@ -118,9 +120,34 @@ namespace imgproc {
 
     G_TYPED_KERNEL(GGoodFeatures,
                    <cv::GArray<cv::Point2f>(GMat,int,double,double,Mat,int,bool,double)>,
-                   "org.opencv.imgproc.goodFeaturesToTrack") {
+                   "org.opencv.imgproc.feature.goodFeaturesToTrack") {
         static GArrayDesc outMeta(GMatDesc, int, double, double, const Mat&, int, bool, double) {
             return empty_array_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectMat, <GOpaque<Rect>(GMat)>,
+                   "org.opencv.imgproc.shape.boundingrectMat") {
+        static GOpaqueDesc outMeta(GMatDesc in) {
+            GAPI_Assert( // Mat should be a gray-scale image
+                         (in.depth == CV_8U && in.chan == 1) ||
+                         // or a vector of 2D Points
+                         in.ifVector(2, CV_32S)  || in.ifVector(2, CV_32F));
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectVector32S, <GOpaque<Rect>(GArray<Point2i>)>,
+                   "org.opencv.imgproc.shape.boundingrectVector32S") {
+        static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectVector32F, <GOpaque<Rect>(GArray<Point2f>)>,
+                   "org.opencv.imgproc.shape.boundingrectVector32F") {
+        static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
         }
     };
 
@@ -230,7 +257,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12torgbp") {
+    G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12torgbp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
             GAPI_Assert(inUV.depth == CV_8U);
@@ -244,7 +271,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
+    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12togray") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth   == CV_8U);
             GAPI_Assert(inUV.depth  == CV_8U);
@@ -259,7 +286,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12tobgrp") {
+    G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12tobgrp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
             GAPI_Assert(inUV.depth == CV_8U);
@@ -719,6 +746,10 @@ proportional to sigmaSpace.
 GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
                                   int borderType = BORDER_DEFAULT);
 
+//! @} gapi_filters
+
+//! @addtogroup gapi_feature
+//! @{
 /** @brief Finds edges in an image using the Canny algorithm.
 
 The function finds edges in the input image and marks them in the output map edges using the
@@ -726,7 +757,7 @@ Canny algorithm. The smallest value between threshold1 and threshold2 is used fo
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
 
-@note Function textual ID is "org.opencv.imgproc.filters.canny"
+@note Function textual ID is "org.opencv.imgproc.feature.canny"
 
 @param image 8-bit input image.
 @param threshold1 first threshold for the hysteresis procedure.
@@ -761,7 +792,7 @@ The function can be used to initialize a point-based tracker of an object.
 A \> B, the vector of returned corners with qualityLevel=A will be the prefix of the output vector
 with qualityLevel=B .
 
-@note Function textual ID is "org.opencv.imgproc.goodFeaturesToTrack"
+@note Function textual ID is "org.opencv.imgproc.feature.goodFeaturesToTrack"
 
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
@@ -812,7 +843,35 @@ The algorithm normalizes the brightness and increases the contrast of the image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 
-//! @} gapi_filters
+//! @} gapi_feature
+
+//! @addtogroup gapi_shape
+//! @{
+/** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels
+of gray-scale image.
+
+The function calculates and returns the minimal up-right bounding rectangle for the specified
+point set or non-zero pixels of gray-scale image.
+
+@param array Input gray-scale image @ref CV_8UC1 or 2D point set, stored in Mat:
+    @ref CV_32SC1, @ref CV_32FC1 with 2 cols;
+    or @ref CV_32SC2, @ref CV_32FC2 with the single column or row.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GMat& src);
+
+/** @overload
+
+@param src Input 2D point set, stored in std::vector<cv::Point2i>.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2i>& src);
+
+/** @overload
+
+@param src Input 2D point set, stored in std::vector<cv::Point2f>.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2f>& src);
+
+//! @} gapi_shape
 
 //! @addtogroup gapi_colorconvert
 //! @{

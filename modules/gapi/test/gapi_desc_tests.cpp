@@ -95,6 +95,44 @@ TEST(GAPI_MetaDesc, CanDescribe)
     EXPECT_TRUE (md11.canDescribe(m1));
 }
 
+TEST(GAPI_MetaDesc, IfVector)
+{
+    constexpr int elemSize = 2;
+
+    //
+    cv::Mat m = cv::InputArray(std::vector<cv::Point> { {0, 0}, {1, 1}, {2, 2} }).getMat();
+    const auto desc0 = cv::descr_of(m); // elemSize of vector == 2 as elements are cv::Point
+    EXPECT_TRUE (desc0.ifVector(elemSize));
+
+    constexpr int w = 15;
+    constexpr int h = 7;
+    constexpr int t = CV_8U;
+    cv::Mat m1(h, 1,        CV_MAKE_TYPE(t, elemSize));
+    cv::Mat m2(1, w,        CV_MAKE_TYPE(t, elemSize));
+    cv::Mat m3(h, elemSize, CV_MAKE_TYPE(t, 1));
+    cv::Mat m4(elemSize, w, CV_MAKE_TYPE(t, 1));
+    cv::Mat m5(h, 2,        CV_MAKE_TYPE(t, elemSize));
+    cv::Mat m6(h, 1,        CV_MAKE_TYPE(t, elemSize + 1));
+
+    // elemSize-channel, 1-col
+    const auto desc1 = cv::descr_of(m1);
+    EXPECT_TRUE  (desc1.ifVector(elemSize));
+    EXPECT_FALSE (desc1.ifVector(elemSize + 1));
+    // depth check
+    EXPECT_TRUE  (desc1.ifVector(elemSize, t));
+    EXPECT_FALSE (desc1.ifVector(elemSize, t + 1));
+    // elemSize-channel, 1-row
+    const auto desc2 = cv::descr_of(m2);
+    EXPECT_TRUE  (desc2.ifVector(elemSize));
+    EXPECT_FALSE (desc2.ifVector(elemSize + 1));
+    // 1-channel, elemSize-cols
+    const auto desc3 = cv::descr_of(m3);
+    EXPECT_TRUE  (desc1.ifVector(elemSize));
+    EXPECT_FALSE (desc1.ifVector(elemSize + 1));
+
+
+}
+
 TEST(GAPI_MetaDesc, OwnMatDescOneCh)
 {
     cv::gapi::own::Mat mat(240, 320, CV_8U, nullptr);

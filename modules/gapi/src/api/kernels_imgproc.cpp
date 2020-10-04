@@ -115,6 +115,21 @@ cv::GArray<cv::Point2f> goodFeaturesToTrack(const GMat& image, int maxCorners, d
                                       useHarrisDetector, k);
 }
 
+GOpaque<Rect> boundingRect(const GMat& src)
+{
+    return imgproc::GBoundingRectMat::on(src);
+}
+
+GOpaque<Rect> boundingRect(const GArray<Point2i>& src)
+{
+    return imgproc::GBoundingRectVector32S::on(src);
+}
+
+GOpaque<Rect> boundingRect(const GArray<Point2f>& src)
+{
+    return imgproc::GBoundingRectVector32F::on(src);
+}
+
 GMat RGB2Gray(const GMat& src)
 {
     return imgproc::GRGB2Gray::on(src);

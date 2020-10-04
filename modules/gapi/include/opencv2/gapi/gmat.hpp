@@ -113,6 +113,13 @@ struct GAPI_EXPORTS GMatDesc
     // and as a 3-channel planar mat with height divided by 3)
     bool canDescribe(const cv::Mat& mat) const;
 
+    // Checks if the passed mat is in fact a stored vector of
+    // a given elements' size and a given depth.
+    // Mat should have: `elemSize` channels and 1 row or 1 column;
+    //               or `elemSize` cols and 1 channel.
+    // (See `cv::Mat::checkVector()`)
+    bool ifVector(int elemSize, int ddepth = -1) const;
+
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
     // FIXME: a better name?
