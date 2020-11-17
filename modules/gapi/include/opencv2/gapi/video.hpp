@@ -63,9 +63,13 @@ G_TYPED_KERNEL(GCalcOptFlowLKForPyr,
     }
 };
 
-G_TYPED_KERNEL(GBackSubMOG2, <GMat(GMat)>, "org.opencv.video.backgroundSubtractormog2")
+G_TYPED_KERNEL(GBackgroundSubtractorMOG2, <GMat(GMat, double)>, "org.opencv.video.BackgroundSubtractorMOG2")
 {
-    static GMatDesc outMeta(GMatDesc in) { return in.withType(CV_8U, 1); }
+    static GMatDesc outMeta(GMatDesc in, double learningRate)
+    {
+        GAPI_Assert(learningRate <= 1);
+        return in.withType(CV_8U, 1);
+    }
 };
 
 } //namespace video
@@ -180,14 +184,18 @@ The class generates a foreground mask.
 
 Output image is foreground mask, i.e. 8-bit unsigned 1-channel (binary) matrix @ref CV_8UC1.
 
-@note Functional textual ID is "org.opencv.videoanalysis.backgroundSubtractormog2"
+@note Functional textual ID is "org.opencv.video.BackgroundSubtractorMOG2"
 
 @param src input image: Floating point frame is used without scaling and should be in range [0,255].
+@param learningRate The value between 0 and 1 that indicates how fast the background model is
+learnt. Negative parameter value makes the algorithm to use some automatically chosen learning
+rate. 0 means that the background model is not updated at all, 1 means that the background model
+is completely reinitialized from the last frame.
 @ref CV_32FC3.
 
-@sa BackSubMOG2
+@sa
 */
-GAPI_EXPORTS GMat BackSubMOG2(const GMat& src);
+GAPI_EXPORTS GMat BackgroundSubtractorMOG2(const GMat& src, double learningRate = -1);
 
 //! @} gapi_video
 } //namespace gapi

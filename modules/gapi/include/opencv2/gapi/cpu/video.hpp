@@ -17,9 +17,39 @@ namespace cpu {
 GAPI_EXPORTS GKernelPackage kernels();
 
 } // namespace cpu
+
+struct BackgroundSubtractorParams
+{
+    int history;
+    double threshold;
+    bool detectShadows;
+
+    BackgroundSubtractorParams()
+    {
+        history = 500;
+        threshold = 16;
+        detectShadows = true;
+    }
+
+    BackgroundSubtractorParams(int hist, double thr, bool detect)
+    {
+        history = hist;
+        threshold = thr;
+        detectShadows = detect;
+    }
+};
 } // namespace video
 } // namespace gapi
-} // namespace cv
 
+namespace detail {
+    template<> struct CompileArgTag<cv::gapi::video::BackgroundSubtractorParams>
+    {
+        static const char* tag()
+        {
+            return "org.opencv.video.background_substractor_params";
+        }
+    };
+}  // namespace detail
+} // namespace cv
 
 #endif // OPENCV_GAPI_CPU_VIDEO_API_HPP

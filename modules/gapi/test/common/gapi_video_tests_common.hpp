@@ -346,9 +346,7 @@ inline void compareBackSubResults(const cv::Mat &actual, const cv::Mat &expected
 
 inline void testBackSubInStreaming(cv::GStreamingCompiled gapiBackSub, const int diffPercent)
 {
-    cv::Mat frame,
-        gapiForeground,
-        ocvForeground;
+    cv::Mat frame, gapiForeground, ocvForeground;
 
     gapiBackSub.start();
     EXPECT_TRUE(gapiBackSub.running());
