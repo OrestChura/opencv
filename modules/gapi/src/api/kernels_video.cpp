@@ -57,5 +57,10 @@ GMat BackgroundSubtractorMOG2(const GMat& src, double learningRate)
     return GBackgroundSubtractorMOG2::on(src, learningRate);
 }
 
+GMat KalmanFilter(const GMat& m, const GMat& c)
+{
+    return GKalmanFilter::on(m, c);
+}
+
 } //namespace gapi
 } //namespace cv

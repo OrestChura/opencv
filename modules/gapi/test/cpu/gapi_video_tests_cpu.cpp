@@ -101,6 +101,10 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTe
 INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorMOG2InternalTestCPU),
                               BackgroundSubtractorMOG2Test,
                               Combine(Values(VIDEO_CPU),
-                              Values("cv/video/768x576.avi"),
-                              Values("cv/video/1920x1080.avi")));
+                                      Values("cv/video/768x576.avi"),
+                                      Values("cv/video/1920x1080.avi")));
+
+INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterInternalTestCPU,
+                              KalmanFilterTest,
+                              Values(VIDEO_CPU));
 } // opencv_test

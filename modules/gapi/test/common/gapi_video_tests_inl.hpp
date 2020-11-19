@@ -10,6 +10,7 @@
 #include <opencv2/gapi/cpu/video.hpp>
 #include "gapi_video_tests.hpp"
 #include <opencv2/gapi/streaming/cap.hpp>
+#include "opencv2/ts.hpp"
 
 namespace opencv_test
 {
@@ -124,6 +125,47 @@ TEST_P(BackgroundSubtractorMOG2Test, AccuracyTest)
     testBackSubInStreaming(gapiBackSub, 1);
 }
 
+
+TEST_P(KalmanFilterTest, AccuracyTest)
+{
+    const int Dim = 7;
+    const double max_init = 1;
+    //const double max_noise = 0.1;
+    const double eps = 1.000;
+
+    cv::Mat measure(Dim, 1, CV_32F);
+    cv::Mat control = Mat::zeros(Dim, Dim, CV_32F);
+
+    cv::Mat gapiKState(Dim, 1, CV_32F);
+    cv::Mat ocvKState(Dim, 1, CV_32F);
+
+    cv::randu(measure, Scalar::all(-max_init), Scalar::all(max_init));
+
+    // G-API code
+    cv::GMat m, contr;
+    cv::GMat out = cv::gapi::KalmanFilter(m, contr);
+    cv::GComputation c(cv::GIn(m, contr), cv::GOut(out));
+
+    std::vector<cv::Mat> mats = { measure, control };
+
+    auto gapiKalman = c.compile(cv::descrs_of(mats),
+                                getCompileArgsUpdate(getCompileArgs(),
+                                                     GCompileArg(cv::gapi::video::KalmanParams(Dim, Dim, 0, CV_32F))));
+
+    gapiKalman(cv::gin(measure, control), cv::gout(gapiKState));
+
+    cv::KalmanFilter ocvKalman(Dim, Dim, 0, CV_32F);
+    ocvKalman.predict();
+    ocvKState = ocvKalman.correct(measure);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        double diff = 0;
+        vector<int> idx;
+        int code = cmpEps(gapiKState, ocvKState, &diff, eps, &idx, false);
+        EXPECT_TRUE(code >= 0);
+    }
+}
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_INL_HPP

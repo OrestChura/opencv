@@ -30,6 +30,8 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(BuildPyr_CalcOptFlow_PipelineTest,
 
 GAPI_TEST_FIXTURE_SPEC_PARAMS(BackgroundSubtractorMOG2Test, FIXTURE_API(std::string, std::string), 2, filePath1, filePath2)
 
+GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterTest, <>, 0)
+
 } // opencv_test
 
 

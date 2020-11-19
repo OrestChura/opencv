@@ -104,6 +104,48 @@ GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractorMOG2,
     }
 };
 
+GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanFilter)
+{
+    static void setup(const cv::GMatDesc &, const cv::GMatDesc &,
+                      std::shared_ptr<cv::KalmanFilter> &state,
+                      const cv::GCompileArgs &compileArgs)
+    {
+
+        auto kfParams = cv::gapi::getCompileArg<cv::gapi::video::KalmanParams>(compileArgs)
+                        .value_or(cv::gapi::video::KalmanParams{});
+
+        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDims, kfParams.mpDims);
+
+        state->transitionMatrix = kfParams.transitionMatrix;
+        state->statePre = kfParams.statePre;
+        state->statePost = kfParams.statePost;
+        state->measurementMatrix = kfParams.measurementMatrix;
+        state->processNoiseCov = kfParams.processNoiseCov;
+        state->measurementNoiseCov = kfParams.measurementNoiseCov;
+        state->errorCovPre = kfParams.errorCovPre;
+        state->gain = kfParams.gain;
+        state->errorCovPost = kfParams.errorCovPost;
+        state->controlMatrix = kfParams.controlMatrix;
+
+        GAPI_Assert(state);
+    }
+
+    static void run(const cv::Mat& measurements, const cv::Mat& control, cv::Mat &out, cv::KalmanFilter& state)
+    {
+        cv::Mat pre;
+
+        if (!control.empty() && cv::countNonZero(control) > 0)
+            pre = state.predict(control);
+        else
+            pre = state.predict();
+
+        if (!measurements.empty() && cv::countNonZero(measurements) > 0)
+            state.correct(measurements).copyTo(out);
+        else
+            pre.copyTo(out);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -111,6 +153,7 @@ cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
         , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowLKForPyr
         , GCPUBackgroundSubtractorMOG2
+        , GCPUKalmanFilter
         >();
     return pkg;
 }

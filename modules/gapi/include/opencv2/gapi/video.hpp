@@ -72,6 +72,14 @@ G_TYPED_KERNEL(GBackgroundSubtractorMOG2, <GMat(GMat, double)>, "org.opencv.vide
     }
 };
 
+G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GMat)>, "org.opencv.video.KalmanFilter")
+{
+    static GMatDesc outMeta(GMatDesc measurement, GMatDesc)
+    {
+        return measurement;
+    }
+};
+
 } //namespace video
 
 //! @addtogroup gapi_video
@@ -196,6 +204,24 @@ is completely reinitialized from the last frame.
 @sa
 */
 GAPI_EXPORTS GMat BackgroundSubtractorMOG2(const GMat& src, double learningRate = -1);
+
+/** @brief The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>.
+The class generates a foreground mask. However, you can modify transitionMatrix, controlMatrix,
+and measurementMatrix to get an extended Kalman filter functionality.
+
+Output image is predicted or corrected state. It depends on whether passed measurement matrix empty or not,
+32-bit or 64-bit float 1-channel matrix @ref CV_32F or CV_64F.
+
+@note Functional textual ID is "org.opencv.video.KalmanFilter"
+
+@param measurements input image: Floating point matrix contains measurmens. It is used without scaling
+ and should be in range [0,255].
+@param control input image: Floating point matrix contains control data for changing dynamic system.
+@ref CV_32F or CV_64F.
+
+@sa
+*/
+GAPI_EXPORTS GMat KalmanFilter(const GMat& measurements, const GMat& control);
 
 //! @} gapi_video
 } //namespace gapi
