@@ -13,6 +13,8 @@
 namespace
 {
 #define VIDEO_CPU [] () { return cv::compile_args(cv::gapi::video::cpu::kernels()); }
+#define VIDEO_CPU_AGRS(...) [] () { return cv::compile_args(cv::gapi::video::cpu::kernels(), \
+                                                            __VA_ARGS__); }
 
 #ifdef HAVE_OPENCV_VIDEO
 #define WITH_VIDEO(X) X
@@ -98,13 +100,15 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTe
                                       Values(3),
                                       Values(true)));
 
+using BgParam = cv::gapi::video::BackgroundSubtractorParams;
 INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorMOG2InternalTestCPU),
                               BackgroundSubtractorMOG2Test,
-                              Combine(Values(VIDEO_CPU),
+                              Combine(Values(VIDEO_CPU_AGRS(BgParam(500, 16, true))),
                                       Values("cv/video/768x576.avi"),
                                       Values("cv/video/1920x1080.avi")));
 
+using KalParam = cv::gapi::video::KalmanParams;
 INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterInternalTestCPU,
                               KalmanFilterTest,
-                              Values(VIDEO_CPU));
+                              Values(VIDEO_CPU_AGRS(KalParam(7, 7, 0, CV_32F))));
 } // opencv_test

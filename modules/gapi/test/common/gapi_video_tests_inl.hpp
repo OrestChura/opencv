@@ -7,7 +7,6 @@
 #ifndef OPENCV_GAPI_VIDEO_TESTS_INL_HPP
 #define OPENCV_GAPI_VIDEO_TESTS_INL_HPP
 
-#include <opencv2/gapi/cpu/video.hpp>
 #include "gapi_video_tests.hpp"
 #include <opencv2/gapi/streaming/cap.hpp>
 #include "opencv2/ts.hpp"
@@ -108,9 +107,7 @@ TEST_P(BackgroundSubtractorMOG2Test, AccuracyTest)
     cv::GComputation c(cv::GIn(in), cv::GOut(cv::gapi::copy(in), out));
 
     // G-API compilation of graph for streaming mode
-    auto gapiBackSub = c.compileStreaming(
-                       getCompileArgsUpdate(getCompileArgs(),
-                       GCompileArg(cv::gapi::video::BackgroundSubtractorParams(500, 16, true))));
+    auto gapiBackSub = c.compileStreaming(getCompileArgs());
 
     // Testing G-API Background Substractor in streaming mode
     try
@@ -148,9 +145,7 @@ TEST_P(KalmanFilterTest, AccuracyTest)
 
     std::vector<cv::Mat> mats = { measure, control };
 
-    auto gapiKalman = c.compile(cv::descrs_of(mats),
-                                getCompileArgsUpdate(getCompileArgs(),
-                                                     GCompileArg(cv::gapi::video::KalmanParams(Dim, Dim, 0, CV_32F))));
+    auto gapiKalman = c.compile(cv::descrs_of(mats), getCompileArgs());
 
     gapiKalman(cv::gin(measure, control), cv::gout(gapiKState));
 
