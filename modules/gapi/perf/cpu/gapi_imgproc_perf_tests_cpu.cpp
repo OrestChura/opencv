@@ -48,11 +48,11 @@ INSTANTIATE_TEST_CASE_P(BoxFilterPerfTestCPU, BoxFilterPerfTest,
         Values(-1, CV_32F),
         Values(cv::compile_args(IMGPROC_CPU))));
 
-INSTANTIATE_TEST_CASE_P(BlurPerfTestCPU, BlurPerfTest,
+INSTANTIATE_TEST_CASE_P(BlurPerfTestCPUCTD, BlurPerfTest,
     Combine(Values(AbsTolerance(0).to_compare_f()),
-        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-        Values(3, 5),
-        Values(szVGA, sz720p, sz1080p),
+        Values(CV_8UC1),
+        Values(3),
+        Values(cv::Size(280, 158)),
         Values(cv::BORDER_DEFAULT),
         Values(cv::compile_args(IMGPROC_CPU))));
 
@@ -329,9 +329,9 @@ INSTANTIATE_TEST_CASE_P(RGB2GrayPerfTestCPU, RGB2GrayPerfTest,
         Values(szVGA, sz720p, sz1080p),
         Values(cv::compile_args(IMGPROC_CPU))));
 
-INSTANTIATE_TEST_CASE_P(BGR2GrayPerfTestCPU, BGR2GrayPerfTest,
+INSTANTIATE_TEST_CASE_P(BGR2GrayPerfTestCPUCTD, BGR2GrayPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
-        Values(szVGA, sz720p, sz1080p),
+        Values(cv::Size(280, 158)),
         Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2YUVPerfTestCPU, RGB2YUVPerfTest,
